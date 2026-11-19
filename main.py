@@ -21,6 +21,7 @@ import time
 import urllib.parse
 import urllib.request
 import uuid
+import webbrowser
 
 try:
     import tools_builder
@@ -1495,9 +1496,10 @@ logo = """
 """
 
 BANNER_ROWS = [ln for ln in logo.splitlines() if ln.strip()]
-VERSION = "5.5"
+VERSION = "5.6"
 
 PACK_PATH = os.path.join(BASE_DIR, "pack.json")
+UPGRADE_URL = "https://t.me/zerostate00"
 
 
 def pack_installed():
@@ -1511,6 +1513,12 @@ def pack_info():
         return data if isinstance(data, dict) else {}
     except Exception:
         return {}
+
+
+def build_tag():
+    if pack_info():
+        return P.ok("paid")
+    return P.warn("free") + P.dim("  •  upgrade: t.me/zerostate00")
 
 
 def pack_entries(section):
@@ -1539,14 +1547,29 @@ def _menu(*entries):
     return out
 
 
+def cmd_upgrade(nf):
+    nf.section("license")
+    if pack_info():
+        nf.kv("build", "paid", nf.P.ok)
+        nf.kv("pack", pack_info().get("version", "-"))
+        return
+    nf.kv("build", "free", nf.P.warn)
+    nf.kv("upgrade", UPGRADE_URL)
+    nf.note("opening telegram")
+    try:
+        webbrowser.open(UPGRADE_URL)
+    except Exception:
+        pass
+
+
 def cmd_pack_status(nf):
-    nf.section("extensions")
+    nf.section("license")
     info = pack_info()
     if not info:
-        nf.kv("pack", "not installed")
-        nf.note("install with: python3 install_pack.py <pack.zip>")
-        nf.note("or run install pack in this menu")
+        nf.kv("build", "free", nf.P.warn)
+        nf.kv("upgrade", UPGRADE_URL)
         return
+    nf.kv("build", "paid", nf.P.ok)
     nf.kv("pack", info.get("name", "-"))
     nf.kv("version", info.get("version", "-"))
     nf.kv("base", info.get("base", "-"))
@@ -1739,9 +1762,10 @@ UTIL_MENU = _menu(
 
 UPDATE_MENU = _menu(
     ("Tool update", lambda nf: cmd_update(nf)),
-    ("Install extension pack", lambda nf: cmd_pack_install(nf)),
-    ("Pack status", lambda nf: cmd_pack_status(nf)),
-    ("Remove extension pack", lambda nf: cmd_pack_remove(nf)),
+    ("License / upgrade", lambda nf: cmd_upgrade(nf)),
+    ("Activate upgrade", lambda nf: cmd_pack_install(nf)) if not pack_info() else None,
+    ("Pack status", lambda nf: cmd_pack_status(nf)) if pack_info() else None,
+    ("Remove pack", lambda nf: cmd_pack_remove(nf)) if pack_info() else None,
     ("Install dependencies", lambda nf: cmd_deps(nf)),
     ("Optional packages", lambda nf: cmd_optional(nf)),
     *pack_entries("extensions"),
@@ -1820,7 +1844,7 @@ def run_submenu(me, title, entries):
         print()
         for num, label, _fn in entries:
             print("  " + P.pri(f"[{num:>2}]") + " " + P.sec(label))
-        print("  " + P.dim("b = back"))
+        print("  " + P.dim("b = back  •  ") + build_tag())
         print()
         try:
             choice = input("  " + P.pri(f"nxtf0und/{title}") + P.dim("$ ")).strip()
@@ -1891,6 +1915,7 @@ def show_menu():
     print()
     print("  " + P.dim("─" * (min(term_width(), 74) - 2)))
     print("  " + P.dim("b = back  •  0 = exit  •  5 = updates  •  9 = settings"))
+    print("  " + P.dim("build: ") + build_tag())
     print()
 
 def boot():

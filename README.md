@@ -46,7 +46,7 @@ nxtf0und@doxxed.com:~$
 | 2 | Network | host discovery, port scanning, DNS, TLS, HTTP headers, packet capture |
 | 3 | Web | content discovery, endpoint mapping, TLS inspection, site mirroring |
 | 4 | Utilities | hashing, encoding, metadata, local record search |
-| 5 | Updates | tool update, extension pack, dependencies |
+| 5 | Updates | tool update, license, dependencies |
 | 6 | Discord | server info and invite lookup |
 | 7 | Roblox | public API lookups |
 | 8 | Advanced | load testing, reputation checks, vulnerability research |
@@ -88,47 +88,33 @@ tools_discord.py    Discord lookups
 tools_roblox.py     Roblox API lookups
 tools_advanced.py   reputation, CVE and research integration
 tools_system.py     system and anonymity utilities
-install_pack.py     installs or removes an extension pack
+install_pack.py     upgrade pack installer
 build_protected.py  compiles the project to a bytecode copy in dist/
 ```
 
 ## Updates
 
-Type `5` at the main menu.
+Type `5` at the main menu. The menu updates the tool, shows the license,
+installs dependencies and optional packages, and opens the upgrade contact.
 
-| item | action |
-|---|---|
-| 1 | read the published manifest and install a newer build |
-| 2 | install an extension pack from a zip or URL |
-| 3 | show pack name, version and module count |
-| 4 | remove the pack and restore the previous modules |
-| 5 | install `requirements.txt` |
-| 6 | install optional packages |
+The footer shows the current build:
 
-The pack is a single zip and installs into this folder:
-
-```bash
-python3 install_pack.py nxtf0und-pack-1.3.zip
+```
+build: free  •  upgrade: t.me/zerostate00
+build: paid
 ```
 
-Replaced files are copied to `backups/pack-<stamp>/` before the install. The
-installer verifies every module against the manifest and refuses a pack built
-for a different release unless `--force` is passed. Removal restores from that
-backup; if the backup is missing it stops rather than deleting modules.
-
-Both actions offer to restart the tool, which is required for new modules to
-load. Remove from the command line with:
-
-```bash
-python3 install_pack.py --remove
-```
-
-Reinstall the pack after updating the tool.
-
-Tool update 1 is also available as `u` at the prompt, Settings > 7, or
+Tool update is also available as `u` at the prompt, Settings > 7, or
 `python3 main.py --update`. The tool compares its version against the published
 `version.json`, copies replaced files into `backups/`, and restores any file
 that fails to compile.
+
+## Upgrade
+
+The free build covers OSINT, network, web, utilities and the research suite.
+Additional modules are available as a paid upgrade.
+
+Message [t.me/zerostate00](https://t.me/zerostate00).
 
 ## Intended use
 
