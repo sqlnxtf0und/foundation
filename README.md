@@ -1,4 +1,4 @@
-# nxtf0und
+# foundation
 
 Terminal multitool for security research, OSINT and network inspection. One
 Python entry point, modular tool files, no account and no telemetry.
