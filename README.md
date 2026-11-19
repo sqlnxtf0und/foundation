@@ -50,7 +50,7 @@ nxtf0und@doxxed.com:~$
 | 6 | Discord | server info and invite lookup |
 | 7 | Roblox | public API lookups |
 | 8 | Advanced | load testing, reputation checks, vulnerability research |
-| 9 | Settings | theme, timeout, user agent, save prompts, updates |
+| 9 | Settings | theme, fonts, borders, animation, palette, api keys, updates |
 
 Advanced includes the research suite: version to CVE correlation, parameter
 discovery, fuzzing, injection and misconfiguration probes, JWT analysis,
@@ -123,9 +123,55 @@ the change.
 
 ## Themes
 
-`lightblue` (default), `bloody_red`, `pitchblack`, `matrix`, `cyber`, `amber`,
-`nord`, `dracula`, `solarized`, `forest`, `violet`, `ice`, `ember`.
-Set under Settings > 5. Stored in `settings.json`.
+25 built-in palettes, plus a full custom-colour mode.
+
+`lightblue` (default), `bloody_red`, `pitchblack`, `matrix`, `cyber`, `nord`,
+`dracula`, `tokyo`, `synthwave`, `gruvbox`, `catppuccin`, `monokai`,
+`rose_pine`, `neon`, `blood_moon`, `violet`, `grayscale`, `solarized`, `ice`,
+`amber`, `mocha`, `ocean`, `forest`, `ember`, `sunset`.
+
+Set under **Settings > 4** (browsable gallery with live swatches). Stored in
+`settings.json`.
+
+## Customization
+
+Everything about the interface is configurable, and a first-run wizard walks
+a new install through it. Re-run it any time with `python3 main.py --setup`,
+or skip it with `--no-setup`.
+
+**Settings > 9** opens the customization center:
+
+| Option | What it does |
+|---|---|
+| 1 | Animations on/off |
+| 2 | Animation style: `typewriter`, `sweep`, `glitch`, `fade`, `instant` |
+| 3 | Animation speed multiplier (0.25 - 4) |
+| 4 | Theme gallery (25 palettes + custom) |
+| 5 | Custom palette: per-slot hex, colour picker, seed from theme |
+| 6 | Font: default, bold, dim, italic, underline, bold_italic, reverse |
+| 7 | Border: double, single, rounded, heavy, ascii, none |
+| 8 | Glyphs: unicode, ascii, dots, minimal |
+| 9 | Density: compact, normal, roomy |
+| a | Logo: block, slim, none |
+| c | Colour mode: truecolor, 256, 16 (for terminals without 24-bit) |
+| d | Clock on/off |
+| e | Accent colour (overrides the primary slot only) |
+| f | HTTP timeout |
+| r | Save reports |
+| s | Preview every element at once |
+| k | API keys and relay |
+| u | Check for updates |
+| z | Reset all defaults |
+
+Custom palettes have six independent slots: primary, secondary, muted,
+success, warning and error. The colour picker tunes one channel (r/g/b) at a
+time with live preview; deltas are clamped to 0-255, so the value can never
+leave the valid range.
+
+Unknown or malformed settings are discarded at load. A hand-edited
+`settings.json` containing an invalid theme, font, border, glyph set, density,
+logo style, colour mode, animation style or non-hex colour falls back to its
+default instead of breaking the interface.
 
 ## Layout
 

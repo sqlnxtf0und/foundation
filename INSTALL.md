@@ -155,6 +155,21 @@ python3 main.py
 
 ## First run
 
+The first time you start the tool it opens a setup screen: theme, animation
+style, animations on/off, logo, border, density, glyphs and colour mode. Each
+choice previews live. When it finishes, a preview page renders every element at
+once.
+
+Re-run it any time:
+
+```bash
+python3 main.py --setup      # walk through setup again
+python3 main.py --no-setup   # start without the wizard
+```
+
+Everything the wizard sets is also under **Settings > 9**, along with custom
+palettes, fonts, accent colour and animation speed.
+
 ```
 1 OSINT          usernames, email, phone, domains, IPs, certificates
 2 Network        host and port scanning, DNS, TLS, headers, capture
@@ -164,7 +179,7 @@ python3 main.py
 6 Discord        server and webhook lookups
 7 Roblox         public API lookups
 8 Advanced       load testing, reputation, vulnerability research
-9 Settings       theme, timeout, user agent, save prompts, updates
+9 Settings       theme, fonts, borders, animation, palette, api keys, updates
 0 Exit
 ```
 

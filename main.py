@@ -62,11 +62,26 @@ REPORT_DIR = os.path.join(BASE_DIR, "reports")
 
 DEFAULT_SETTINGS = {
     "animations": True,
+    "anim_style": "typewriter",
     "anim_speed": 1.0,
     "timeout": 8,
     "user_agent": "Mozilla/5.0 (X11; Linux x86_64) nxtf0und/2.0",
     "theme": "lightblue",
+    "custom_colors": {
+        "pri": "#6ebeff", "sec": "#b2e4ff", "dim": "#7692ae",
+        "ok": "#56e3aa", "warn": "#ffc860", "bad": "#ff6870",
+    },
+    "accent": "",
+    "font": "default",
+    "border": "double",
+    "glyphs": "unicode",
+    "density": "normal",
+    "logo": "block",
+    "color_mode": "truecolor",
+    "show_clock": False,
+    "show_build": True,
     "save_reports": True,
+    "setup_done": False,
 }
 
 THEMES = {
@@ -83,10 +98,80 @@ THEMES = {
     "violet": ((149, 117, 205), (209, 196, 233), (112, 96, 148), (128, 203, 196), (255, 183, 77), (239, 83, 80)),
     "ice": ((129, 212, 250), (224, 247, 250), (96, 125, 139), (128, 222, 234), (255, 213, 79), (255, 138, 128)),
     "ember": ((255, 138, 76), (255, 204, 188), (141, 110, 99), (174, 213, 129), (255, 202, 40), (255, 82, 82)),
+    "tokyo": ((122, 162, 247), (198, 208, 245), (86, 95, 137), (158, 206, 106), (224, 175, 104), (247, 118, 142)),
+    "synthwave": ((255, 113, 206), (114, 241, 255), (140, 90, 150), (114, 241, 255), (255, 190, 90), (255, 90, 120)),
+    "gruvbox": ((250, 189, 47), (235, 219, 178), (146, 131, 116), (184, 187, 38), (250, 189, 47), (251, 73, 52)),
+    "catppuccin": ((203, 166, 247), (205, 214, 244), (108, 112, 134), (166, 227, 161), (249, 226, 175), (243, 139, 168)),
+    "monokai": ((249, 38, 114), (248, 248, 242), (117, 113, 94), (166, 226, 46), (230, 219, 116), (249, 38, 114)),
+    "rose_pine": ((196, 167, 231), (224, 222, 244), (110, 106, 134), (156, 207, 216), (246, 193, 119), (235, 111, 146)),
+    "ocean": ((86, 182, 194), (197, 233, 235), (94, 133, 136), (147, 224, 160), (255, 214, 102), (255, 120, 120)),
+    "sunset": ((255, 138, 101), (255, 204, 188), (153, 110, 96), (174, 213, 129), (255, 202, 40), (255, 82, 82)),
+    "neon": ((57, 255, 20), (180, 255, 180), (60, 140, 60), (57, 255, 20), (255, 255, 0), (255, 0, 80)),
+    "mocha": ((201, 169, 146), (236, 224, 212), (140, 124, 112), (166, 204, 160), (230, 200, 140), (230, 120, 120)),
+    "grayscale": ((220, 220, 220), (180, 180, 180), (120, 120, 120), (200, 200, 200), (200, 200, 200), (230, 120, 120)),
+    "blood_moon": ((180, 20, 30), (240, 120, 120), (110, 60, 60), (120, 200, 140), (240, 170, 60), (255, 40, 40)),
 }
+
+FONTS = {
+    "default": "",
+    "bold": "1",
+    "dim": "2",
+    "italic": "3",
+    "underline": "4",
+    "bold_italic": "1;3",
+    "reverse": "7",
+}
+
+BORDERS = {
+    "double": ("╔", "╗", "╚", "╝", "═", "║"),
+    "single": ("┌", "┐", "└", "┘", "─", "│"),
+    "rounded": ("╭", "╮", "╰", "╯", "─", "│"),
+    "heavy": ("┏", "┓", "┗", "┛", "━", "┃"),
+    "ascii": ("+", "+", "+", "+", "-", "|"),
+    "none": ("", "", "", "", "", ""),
+}
+
+GLYPHS = {
+    "unicode": {"prompt": "└─▶", "bullet": "▌", "dot": "•", "ok": "✓", "hit": "◆"},
+    "ascii": {"prompt": "-->", "bullet": ">", "dot": "*", "ok": "ok", "hit": ">"},
+    "dots": {"prompt": "·>", "bullet": "■", "dot": "·", "ok": "✓", "hit": "●"},
+    "minimal": {"prompt": "", "bullet": "", "dot": "", "ok": "+", "hit": "*"},
+}
+
+ANIM_STYLES = ("typewriter", "sweep", "glitch", "fade", "instant")
+COLOR_MODES = ("truecolor", "256", "16")
+DENSITIES = {"compact": 0, "normal": 1, "roomy": 2}
+LOGOS = ("block", "slim", "none")
+
+_ENUMS = {
+    "anim_style": ANIM_STYLES,
+    "font": tuple(FONTS),
+    "border": tuple(BORDERS),
+    "glyphs": tuple(GLYPHS),
+    "density": tuple(DENSITIES),
+    "logo": LOGOS,
+    "color_mode": COLOR_MODES,
+}
+
+
+def is_hex(value):
+    return isinstance(value, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", value) is not None
+
+
+def hex_to_rgb(value, fallback="#ffffff"):
+    value = value if is_hex(value) else fallback
+    if not is_hex(value):
+        value = "#ffffff"
+    return (int(value[1:3], 16), int(value[3:5], 16), int(value[5:7], 16))
+
+
+def rgb_to_hex(rgb):
+    return "#%02x%02x%02x" % (rgb[0], rgb[1], rgb[2])
+
 
 def load_settings():
     cfg = dict(DEFAULT_SETTINGS)
+    cfg["custom_colors"] = dict(DEFAULT_SETTINGS["custom_colors"])
     try:
         with open(SETTINGS_PATH, "r", encoding="utf-8") as fh:
             disk = json.load(fh)
@@ -96,8 +181,20 @@ def load_settings():
                     cfg[k] = disk[k]
     except Exception:
         pass
-    if cfg.get("theme") not in THEMES:
+    if cfg.get("theme") not in THEMES and cfg.get("theme") != "custom":
         cfg["theme"] = DEFAULT_SETTINGS["theme"]
+    for key, allowed in _ENUMS.items():
+        if cfg.get(key) not in allowed:
+            cfg[key] = DEFAULT_SETTINGS[key]
+    colours = cfg.get("custom_colors")
+    if not isinstance(colours, dict):
+        colours = dict(DEFAULT_SETTINGS["custom_colors"])
+    for slot, fallback in DEFAULT_SETTINGS["custom_colors"].items():
+        if not is_hex(colours.get(slot)):
+            colours[slot] = fallback
+    cfg["custom_colors"] = colours
+    if cfg.get("accent") and not is_hex(cfg.get("accent")):
+        cfg["accent"] = ""
     return cfg
 
 def save_settings(cfg):
@@ -120,18 +217,81 @@ def _blend(a, b, t):
             _clamp(a[1] + (b[1] - a[1]) * t),
             _clamp(a[2] + (b[2] - a[2]) * t))
 
+def _ansi16(rgb):
+    """Map an RGB triple onto the 8 basic ANSI foreground colours."""
+    palette = ((0, 0, 0), (205, 49, 49), (13, 188, 121), (229, 229, 16),
+               (36, 114, 200), (188, 63, 188), (17, 168, 205), (229, 229, 229))
+    best, dist = 7, None
+    for i, ref in enumerate(palette):
+        d = sum((rgb[c] - ref[c]) ** 2 for c in range(3))
+        if dist is None or d < dist:
+            best, dist = i, d
+    return 30 + best
+
+
+def _xterm256(rgb):
+    def ramp(v):
+        return max(0, min(5, round((v / 255) * 5)))
+    return 16 + 36 * ramp(rgb[0]) + 6 * ramp(rgb[1]) + ramp(rgb[2])
+
+
+def theme_colors(name):
+    """Resolve a theme name to its six RGB slots, honouring custom palettes."""
+    if name == "custom":
+        cols = CFG.get("custom_colors") or {}
+        defaults = DEFAULT_SETTINGS["custom_colors"]
+        return tuple(hex_to_rgb(cols.get(slot), defaults[slot])
+                     for slot in ("pri", "sec", "dim", "ok", "warn", "bad"))
+    return THEMES.get(name, THEMES["lightblue"])
+
+
+def swatch(colors):
+    return "".join(f"\033[38;2;{c[0]};{c[1]};{c[2]}m██\033[0m" for c in colors)
+
+
+def glyph(name):
+    table = GLYPHS.get(CFG.get("glyphs", "unicode"), GLYPHS["unicode"])
+    return table.get(name, "")
+
+
+def spacing():
+    return DENSITIES.get(CFG.get("density", "normal"), 1)
+
+
+def border_chars():
+    return BORDERS.get(CFG.get("border", "double"), BORDERS["double"])
+
+
 class Paint:
     def __init__(self):
-        self.set(CFG["theme"])
+        self.set(CFG.get("theme", "lightblue"))
 
     def set(self, theme):
-        self.theme = theme if theme in THEMES else "lightblue"
-        (self.pri_rgb, self.sec_rgb, self.dim_rgb,
-         self.ok_rgb, self.warn_rgb, self.bad_rgb) = THEMES[self.theme]
+        if theme == "custom" or theme not in THEMES:
+            self.pri_rgb, self.sec_rgb, self.dim_rgb, self.ok_rgb, \
+                self.warn_rgb, self.bad_rgb = theme_colors(theme)
+            self.theme = theme
+        else:
+            self.theme = theme
+            (self.pri_rgb, self.sec_rgb, self.dim_rgb,
+             self.ok_rgb, self.warn_rgb, self.bad_rgb) = THEMES[theme]
+        accent = CFG.get("accent") or ""
+        if is_hex(accent):
+            self.pri_rgb = hex_to_rgb(accent)
 
-    @staticmethod
-    def rgb(rgb, text):
-        return f"\033[38;2;{rgb[0]};{rgb[1]};{rgb[2]}m{text}\033[0m"
+    def codes(self):
+        return FONTS.get(CFG.get("font", "default"), "")
+
+    def rgb(self, rgb, text, extra=""):
+        codes = ";".join(c for c in (self.codes(), extra) if c)
+        mode = CFG.get("color_mode", "truecolor")
+        if mode == "16":
+            head = f"\033[{_ansi16(rgb)}" + (f";{codes}" if codes else "") + "m"
+        elif mode == "256":
+            head = f"\033[38;5;{_xterm256(rgb)}" + (f";{codes}" if codes else "") + "m"
+        else:
+            head = f"\033[38;2;{rgb[0]};{rgb[1]};{rgb[2]}" + (f";{codes}" if codes else "") + "m"
+        return head + text + "\033[0m"
 
     def pri(self, s):
         return self.rgb(self.pri_rgb, s)
@@ -208,23 +368,62 @@ def sleep_t(d):
         return
     time.sleep(max(0.0, d * float(CFG["anim_speed"])))
 
+def anim_style():
+    if not CFG.get("animations"):
+        return "instant"
+    return CFG.get("anim_style", "typewriter")
+
 def type_out(text, color=None, delay=0.004):
     color = color or P.sec
-    if not CFG["animations"]:
+    style = anim_style()
+    if style == "instant":
         print(color(text))
+        return
+    da = delay * float(CFG["anim_speed"])
+    if style == "sweep":
+        for i in range(1, len(text) + 1):
+            sys.stdout.write("\r" + color(text[:i]) + P.dim(text[i:i + 1]) + "   ")
+            sys.stdout.flush()
+            time.sleep(da)
+        sys.stdout.write("\r" + color(text) + "   \n")
+        sys.stdout.flush()
+        return
+    if style == "glitch":
+        pool = "▓▒░<>/\\|#$%&"
+        for frame in range(4):
+            noise = "".join(random.choice(pool) if c != " " and frame < 3 else c
+                            for c in text)
+            sys.stdout.write("\r" + P.dim(noise))
+            sys.stdout.flush()
+            time.sleep(0.05 * float(CFG["anim_speed"]))
+        sys.stdout.write("\r" + color(text) + "\n")
+        sys.stdout.flush()
+        return
+    if style == "fade":
+        for i in range(6):
+            t = i / 5
+            shade = _blend(P.dim_rgb, P.sec_rgb, t)
+            sys.stdout.write("\r" + P.rgb(shade, text))
+            sys.stdout.flush()
+            time.sleep(0.035 * float(CFG["anim_speed"]))
+        sys.stdout.write("\r" + color(text) + "\n")
+        sys.stdout.flush()
         return
     for ch in text:
         sys.stdout.write(color(ch))
         sys.stdout.flush()
-        time.sleep(delay * float(CFG["anim_speed"]))
+        time.sleep(da)
     print()
 
 def loading(msg, seconds=0.9):
-    if not CFG["animations"]:
-        print("  " + P.dim("[ ok ] ") + msg)
+    style = anim_style()
+    if style == "instant":
+        print("  " + P.dim(f"[ {glyph('ok')} ] ") + msg)
         return
+    spinners = {"typewriter": "◐◓◑◒", "sweep": "▁▃▄▅▆▇█▇▆▅▄▃",
+                "glitch": "▖▘▝▗", "fade": "·∙•●•∙"}
+    spinner = spinners.get(style, "◐◓◑◒")
     bar_len = 26
-    spinner = "◐◓◑◒"
     start = time.time()
     frames = 0
     while True:
@@ -244,19 +443,40 @@ def loading(msg, seconds=0.9):
         if frac >= 1.0:
             break
         time.sleep(0.03 * float(CFG["anim_speed"]))
-    sys.stdout.write("\r  " + P.ok("✓") + " " + P.dim(msg.ljust(28)) + "\n")
+    sys.stdout.write("\r  " + P.ok(glyph("ok")) + " " + P.dim(msg.ljust(28)) + "\n")
     sys.stdout.flush()
 
 def launch_flash(label):
-    if not CFG["animations"]:
-        print("  " + P.ok("✓ ") + P.sec(label))
+    style = anim_style()
+    mark = glyph("hit")
+    if style == "instant":
+        print("  " + P.ok(glyph("ok") + " ") + P.sec(label))
+        return
+    if style == "glitch":
+        pool = "▓▒░#@$%&*"
+        for frame in range(5):
+            noise = "".join(random.choice(pool) for _ in range(len(label)))
+            sys.stdout.write("\r  " + P.pri(noise) + "  " + P.dim(label.upper()) + "        ")
+            sys.stdout.flush()
+            time.sleep(0.045 * float(CFG["anim_speed"]))
+        sys.stdout.write("\r  " + P.ok(mark) + "  " + P.grad(label.upper(), invert=True) + "        \n")
+        sys.stdout.flush()
+        return
+    if style == "fade":
+        for i in range(5):
+            shade = _blend(P.dim_rgb, P.pri_rgb, i / 4)
+            sys.stdout.write("\r  " + P.rgb(shade, label.upper()) + "        ")
+            sys.stdout.flush()
+            time.sleep(0.04 * float(CFG["anim_speed"]))
+        sys.stdout.write("\r  " + P.ok(mark) + "  " + P.grad(label.upper(), invert=True) + "        \n")
+        sys.stdout.flush()
         return
     frames = ["▖", "▚", "▜", "▐", "█"]
     for f in frames:
         sys.stdout.write("\r  " + P.pri(f * 4) + "  " + P.grad(label.upper(), invert=True) + "        ")
         sys.stdout.flush()
         time.sleep(0.05 * float(CFG["anim_speed"]))
-    sys.stdout.write("\r  " + P.ok("◆") + "  " + P.grad(label.upper(), invert=True) + "        \n")
+    sys.stdout.write("\r  " + P.ok(mark) + "  " + P.grad(label.upper(), invert=True) + "        \n")
     sys.stdout.flush()
 
 def sweep_line():
@@ -264,7 +484,7 @@ def sweep_line():
 
 def section(title):
     print()
-    print("  " + P.pri("▌") + " " + P.bold(P.sec(title)))
+    print("  " + P.pri(glyph("bullet")) + " " + P.bold(P.sec(title)))
     print("  " + P.dim("─" * (min(term_width(), 74) - 2)))
 
 def kv(key, value, color=None):
@@ -968,7 +1188,7 @@ def cmd_url_scan(cfg):
     for header, sev in SECURITY_HEADERS:
         val = hget(headers, header)
         if val:
-            print("  " + P.ok("✓") + " " + P.dim(f"{header:<32}") + P.dim(val[:48]))
+            print("  " + P.ok(glyph("ok")) + " " + P.dim(f"{header:<32}") + P.dim(val[:48]))
         else:
             missing += 1
             finding(sev, f"missing {header}")
@@ -1197,7 +1417,7 @@ def cmd_dns(cfg):
         for res in pool.map(check, COMMON_SUBS):
             if res:
                 found.append(res)
-                print("  " + P.ok("◆") + " " + P.sec(f"{res[0]:<40}") + P.dim(res[1]))
+                print("  " + P.ok(glyph("hit")) + " " + P.sec(f"{res[0]:<40}") + P.dim(res[1]))
 
     finding("OK" if found else "INFO",
             f"{len(found)} subdomains resolved" if found else "no common subdomains")
@@ -1494,69 +1714,338 @@ def cmd_apikeys(cfg):
         KEYS.reload()
         loading("saved")
 
-def cmd_settings(cfg):
+THEME_GROUPS = {
+    "dark": ("lightblue", "bloody_red", "pitchblack", "matrix", "cyber", "nord",
+             "dracula", "tokyo", "synthwave", "gruvbox", "catppuccin", "monokai",
+             "rose_pine", "neon", "blood_moon", "violet", "grayscale"),
+    "light": ("solarized", "ice", "amber", "mocha", "ocean"),
+    "nature": ("forest", "ember", "sunset"),
+}
+
+
+def apply_live(cfg):
+    """Push a settings change into the live renderer immediately."""
+    P.set(cfg.get("theme", "lightblue"))
+
+
+def pick_theme(cfg):
+    clear()
+    show_header("theme gallery")
+    idx = 0
+    for group, names in THEME_GROUPS.items():
+        print()
+        print("  " + P.dim(group))
+        for name in names:
+            idx += 1
+            print("  " + P.pri(f"[{idx:>2}]") + " " +
+                  P.sec(f"{name:<16}") + swatch(THEMES[name]))
+    idx += 1
+    print()
+    print("  " + P.pri(f"[{idx:>2}]") + " " + P.sec(f"{'custom':<16}") +
+          swatch(theme_colors("custom")))
+    print()
+    val = ask("theme (number or name, b = back)", cfg.get("theme", "lightblue"))
+    all_names = [n for names in THEME_GROUPS.values() for n in names] + ["custom"]
+    if val.isdigit() and 1 <= int(val) <= len(all_names):
+        cfg["theme"] = all_names[int(val) - 1]
+    elif val in all_names:
+        cfg["theme"] = val
+    else:
+        note("kept previous theme")
+    apply_live(cfg)
+
+
+def pick_custom_colors(cfg):
+    slots = (("pri", "primary"), ("sec", "secondary"), ("dim", "muted"),
+             ("ok", "success"), ("warn", "warning"), ("bad", "error"))
     while True:
         clear()
-        show_header("settings")
-        section("current configuration")
-        kv("1  animations", "on" if cfg["animations"] else "off",
-           P.ok if cfg["animations"] else P.bad)
-        kv("2  animation speed", f"{cfg['anim_speed']}x")
-        kv("3  http timeout", f"{cfg['timeout']}s")
-        kv("4  user agent", cfg["user_agent"][:52])
-        kv("5  theme", cfg["theme"])
-        kv("6  save reports", "on" if cfg["save_reports"] else "off",
-           P.ok if cfg["save_reports"] else P.bad)
-        kv("7  check for updates", f"github:{UPDATE_REPO}")
-        kv("8  reset defaults", "")
-        kv("9  api keys", "manage external services")
-        kv("0  back", "")
-        choice = ask("setting")
+        show_header("custom palette")
+        for i, (slot, label) in enumerate(slots, 1):
+            hexv = cfg["custom_colors"][slot]
+            rgb = hex_to_rgb(hexv)
+            print("  " + P.pri(f"[{i}]") + " " + P.sec(f"{label:<12}") +
+                  f"{hexv}  " + P.rgb(rgb, "██████"))
+        print()
+        print("  " + P.pri("[7]") + " activate custom theme")
+        print("  " + P.pri("[8]") + " seed from current theme")
+        print("  " + P.pri("[9]") + " hex colour picker")
+        print("  " + P.pri("[0]") + " back")
+        choice = ask("slot")
         if choice in ("", "0"):
             save_settings(cfg)
+            return
+        if choice in {str(i) for i in range(1, 7)}:
+            slot = slots[int(choice) - 1][0]
+            val = ask("hex (#rrggbb)", cfg["custom_colors"][slot])
+            if is_hex(val):
+                cfg["custom_colors"][slot] = val.lower()
+            else:
+                note("invalid hex — kept previous")
+        elif choice == "7":
+            cfg["theme"] = "custom"
+            note("custom theme active")
+        elif choice == "8":
+            base = theme_colors(cfg.get("theme", "lightblue"))
+            for (slot, _label), rgb in zip(slots, base):
+                cfg["custom_colors"][slot] = rgb_to_hex(rgb)
+            note("palette seeded from theme")
+        elif choice == "9":
+            pick_hex_live(cfg, slots)
+        apply_live(cfg)
+        save_settings(cfg)
+
+
+def pick_hex_live(cfg, slots):
+    """Arrow-free channel walk: adjust r/g/b for one slot with live preview."""
+    clear()
+    show_header("colour picker")
+    for i, (slot, label) in enumerate(slots, 1):
+        print("  " + P.pri(f"[{i}]") + " " + P.sec(f"{label:<12}") +
+              cfg["custom_colors"][slot])
+    val = ask("slot to tune")
+    if not (val.isdigit() and 1 <= int(val) <= len(slots)):
+        return
+    slot = slots[int(val) - 1][0]
+    rgb = hex_to_rgb(cfg["custom_colors"][slot])
+    while True:
+        cfg["custom_colors"][slot] = rgb_to_hex(rgb)
+        apply_live(cfg)
+        clear()
+        show_header(f"tuning {slot}")
+        print("  " + P.rgb(rgb, "████████████████████"))
+        print()
+        print("  " + P.pri("r/g/b") + " " + P.dim(f"{rgb[0]:>3} {rgb[1]:>3} {rgb[2]:>3}"))
+        print("  " + P.pri("[1]") + " red   " + P.pri("[2]") + " green   " +
+              P.pri("[3]") + " blue   " + P.pri("[0]") + " done")
+        ch = ask("channel")
+        if ch in ("", "0"):
+            save_settings(cfg)
+            return
+        if ch not in ("1", "2", "3"):
+            note("pick 1, 2, 3 or 0")
+            continue
+        idx = int(ch) - 1
+        amt = ask("delta (-255..255)", "16")
+        try:
+            delta = int(amt)
+        except ValueError:
+            note(f"'{amt}' is not a number — unchanged")
+            continue
+        if not -255 <= delta <= 255:
+            note("delta out of range — unchanged")
+            continue
+        as_list = list(rgb)
+        as_list[idx] = max(0, min(255, as_list[idx] + delta))
+        rgb = tuple(as_list)
+
+
+def pick_font(cfg):
+    names = list(FONTS)
+    print()
+    for i, name in enumerate(names, 1):
+        sample = "\033[" + (FONTS[name] or "0") + "m" + name + "\033[0m" if FONTS[name] else name
+        print("  " + P.pri(f"[{i}]") + " " + P.sec(sample))
+    val = ask("font", cfg.get("font", "default"))
+    if val.isdigit() and 1 <= int(val) <= len(names):
+        cfg["font"] = names[int(val) - 1]
+    elif val in FONTS:
+        cfg["font"] = val
+    else:
+        note("kept previous font")
+
+
+def cycle(cfg, key, options):
+    opts = tuple(options)
+    try:
+        cur = opts.index(cfg.get(key))
+    except ValueError:
+        cur = 0
+    cfg[key] = opts[(cur + 1) % len(opts)]
+    return cfg[key]
+
+
+def cmd_settings(cfg):
+    labels = {
+        "1": ("animations", "on" if cfg["animations"] else "off"),
+        "2": ("animation style", cfg.get("anim_style", "typewriter")),
+        "3": ("speed", f"{cfg['anim_speed']}x"),
+        "4": ("theme", cfg["theme"]),
+        "5": ("custom palette", cfg["theme"] == "custom" and "active" or "inactive"),
+        "6": ("font", cfg.get("font", "default")),
+        "7": ("border", cfg.get("border", "double")),
+        "8": ("glyphs", cfg.get("glyphs", "unicode")),
+        "9": ("density", cfg.get("density", "normal")),
+        "a": ("logo", cfg.get("logo", "block")),
+        "c": ("colour mode", cfg.get("color_mode", "truecolor")),
+        "d": ("clock", "on" if cfg.get("show_clock") else "off"),
+        "e": ("accent", cfg.get("accent") or "auto"),
+        "f": ("http timeout", f"{cfg['timeout']}s"),
+        "r": ("save reports", "on" if cfg["save_reports"] else "off"),
+        "s": ("preview everything", ""),
+        "k": ("api keys / relay", ""),
+        "u": ("check updates", str(UPDATE_REPO)),
+        "z": ("reset defaults", ""),
+        "0": ("back", ""),
+    }
+    while True:
+        clear()
+        show_header("customization")
+        section("appearance")
+        for key in ("1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "c", "d", "e"):
+            name, value = labels[key]
+            kv(f"{key}  {name}", value)
+        section("runtime")
+        for key in ("f", "r"):
+            name, value = labels[key]
+            kv(f"{key}  {name}", value)
+        section("tools + maintenance")
+        for key in ("s", "k", "u", "z", "0"):
+            name, value = labels[key]
+            kv(f"{key}  {name}", value)
+        choice = ask("option").lower()
+        if choice in ("", "0"):
+            save_settings(cfg)
+            apply_live(cfg)
             return
         if choice == "1":
             cfg["animations"] = not cfg["animations"]
         elif choice == "2":
-            val = ask("speed multiplier (0.5 - 3)", str(cfg["anim_speed"]))
+            cfg["anim_style"] = cycle(cfg, "anim_style", ANIM_STYLES)
+        elif choice == "3":
+            val = ask("speed multiplier (0.25 - 4)", str(cfg["anim_speed"]))
             try:
-                cfg["anim_speed"] = max(0.5, min(3.0, float(val)))
+                cfg["anim_speed"] = max(0.25, min(4.0, float(val)))
             except ValueError:
                 note("kept previous value")
-        elif choice == "3":
+        elif choice == "4":
+            pick_theme(cfg)
+        elif choice == "5":
+            pick_custom_colors(cfg)
+        elif choice == "6":
+            pick_font(cfg)
+        elif choice == "7":
+            cfg["border"] = cycle(cfg, "border", BORDERS)
+        elif choice == "8":
+            cfg["glyphs"] = cycle(cfg, "glyphs", GLYPHS)
+        elif choice == "9":
+            cfg["density"] = cycle(cfg, "density", DENSITIES)
+        elif choice == "a":
+            cfg["logo"] = cycle(cfg, "logo", LOGOS)
+        elif choice == "c":
+            cfg["color_mode"] = cycle(cfg, "color_mode", COLOR_MODES)
+        elif choice == "d":
+            cfg["show_clock"] = not cfg.get("show_clock")
+        elif choice == "e":
+            val = ask("accent hex (blank = auto)", cfg.get("accent") or "")
+            if val == "":
+                cfg["accent"] = ""
+            elif is_hex(val):
+                cfg["accent"] = val.lower()
+            else:
+                note("invalid hex — accent cleared")
+                cfg["accent"] = ""
+        elif choice == "f":
             val = ask("timeout seconds (2 - 60)", str(cfg["timeout"]))
             try:
                 cfg["timeout"] = max(2, min(60, int(val)))
             except ValueError:
                 note("kept previous value")
-        elif choice == "4":
-            val = ask("user agent", cfg["user_agent"])
-            if val:
-                cfg["user_agent"] = val
-        elif choice == "5":
-            names = list(THEMES)
-            for i, name in enumerate(names, 1):
-                print("  " + P.sec(f"[{i}]") + f" {name}")
-            val = ask("theme", cfg["theme"])
-            if val.isdigit() and 1 <= int(val) <= len(names):
-                cfg["theme"] = names[int(val) - 1]
-            elif val in THEMES:
-                cfg["theme"] = val
-            P.set(cfg["theme"])
-        elif choice == "6":
+        elif choice == "r":
             cfg["save_reports"] = not cfg["save_reports"]
-        elif choice == "7":
+        elif choice == "s":
+            preview_everything(cfg)
+        elif choice == "k":
+            cmd_apikeys(cfg)
+        elif choice == "u":
             cmd_update(sys.modules[__name__])
-        elif choice == "8":
+        elif choice == "z":
             confirm = ask("reset everything? (y/n)", "n")
             if confirm.lower().startswith("y"):
                 for k, v in DEFAULT_SETTINGS.items():
-                    cfg[k] = v
-                P.set(cfg["theme"])
-        elif choice == "9":
-            cmd_apikeys(cfg)
+                    cfg[k] = dict(v) if isinstance(v, dict) else v
+                apply_live(cfg)
+        apply_live(cfg)
         save_settings(cfg)
         loading("saved")
+
+
+def preview_everything(cfg):
+    """Render one sample of every configured element."""
+    clear()
+    show_header("preview")
+    section("palette")
+    for name, fn in (("primary", P.pri), ("secondary", P.sec), ("muted", P.dim),
+                     ("success", P.ok), ("warning", P.warn), ("error", P.bad)):
+        print("  " + fn(f"{name:<10}") + P.grad(" gradient sample "))
+    section("borders")
+    tl, tr, bl, br, hz, vt = border_chars()
+    inner = 46
+    if hz:
+        print("  " + P.pri(tl + hz * inner + tr))
+        print("  " + P.pri(vt) + P.grad(" nxtf0und // preview ") + " " * (inner - 21) + P.pri(vt))
+        print("  " + P.pri(bl + hz * inner + br))
+    section("glyphs")
+    print("  " + P.sec("prompt ") + P.dim(glyph("prompt")))
+    print("  " + P.sec("bullet ") + P.pri(glyph("bullet")))
+    print("  " + P.sec("ok     ") + P.ok(glyph("ok")))
+    print("  " + P.sec("hit    ") + P.pri(glyph("hit")))
+    section("results")
+    finding("OK", "sample finding", "this is how output renders")
+    finding("MED", "medium", "warning colours")
+    finding("HIGH", "critical", "error colours")
+    section("animation")
+    type_out("typewriter sample line at the configured style", P.sec)
+    loading("spinner sample", 0.5)
+    launch_flash("launch sample")
+    note("preview complete")
+
+
+def cmd_setup(cfg):
+    """First-run wizard: walks a new install through the key options."""
+    clear()
+    print()
+    print("  " + P.grad("  w e l c o m e   t o   n x t f 0 u n d  "))
+    print()
+    print("  " + P.dim("first run — a few quick choices, changeable later in settings (9)"))
+    pause("start setup")
+    steps = [
+        ("theme", "pick a theme", pick_theme),
+        ("anim_style", "animation style", None),
+        ("animations", "animations on/off", None),
+        ("logo", "logo style", None),
+        ("border", "border style", None),
+        ("density", "menu density", None),
+        ("glyphs", "glyph set", None),
+        ("color_mode", "colour mode", None),
+    ]
+    for key, label, fn in steps:
+        clear()
+        show_header("setup")
+        section(label)
+        if fn:
+            fn(cfg)
+        elif key == "animations":
+            val = ask("enable animations? (y/n)", "y")
+            cfg["animations"] = val.lower().startswith("y")
+        else:
+            opts = _ENUMS.get(key)
+            if opts:
+                for i, name in enumerate(opts, 1):
+                    print("  " + P.pri(f"[{i}]") + " " + P.sec(name))
+                val = ask(key, cfg.get(key, opts[0]))
+                if val.isdigit() and 1 <= int(val) <= len(opts):
+                    cfg[key] = opts[int(val) - 1]
+                elif val in opts:
+                    cfg[key] = val
+        apply_live(cfg)
+        save_settings(cfg)
+    cfg["setup_done"] = True
+    save_settings(cfg)
+    clear()
+    show_header("setup complete")
+    preview_everything(cfg)
+    pause("enter the bench")
 
 logo = """
 ██████▒▒█████   █    ██  ███▄    █ ▓█████▄  ▄▄▄     ▄▄▄█████▓ ██▓ ▒█████   ███▄    █
@@ -1953,49 +2442,85 @@ def run_submenu(me, title, entries):
             finding("HIGH", "module error", repr(exc))
         pause()
 
+SLIM_ROWS = [
+    " n x t f 0 u n d ",
+    " security research bench ",
+]
+
+
+def logo_rows():
+    style = CFG.get("logo", "block")
+    if style == "none":
+        return []
+    if style == "slim":
+        return SLIM_ROWS
+    return BANNER_ROWS
+
+
 def show_logo():
-    rows = BANNER_ROWS
+    rows = logo_rows()
     total = max(1, len(rows) - 1)
     for i, row in enumerate(rows):
         print("  " + P.rgb(_blend(P.pri_rgb, P.sec_rgb, i / total), row))
 
+
+def show_clock():
+    if not CFG.get("show_clock"):
+        return
+    stamp = time.strftime("%a %d %b %Y  %H:%M:%S")
+    w = min(term_width(), 76)
+    pad = max(0, (w - len(stamp)) // 2)
+    print(" " * pad + P.dim(stamp))
+
+
 def show_header(title):
     w = min(term_width(), 76)
     inner = w - 2
+    tl, tr, bl, br, hz, vt = border_chars()
     label = f" nxtf0und // {title} "
     if len(label) > inner - 2:
         label = label[:inner - 3] + "… "
     pad = inner - len(label)
     print()
-    print("  " + P.pri("╔" + "═" * inner + "╗"))
-    print("  " + P.pri("║") + P.grad(label) + " " * pad + P.pri("║"))
-    print("  " + P.pri("╚" + "═" * inner + "╝"))
+    if hz:
+        print("  " + P.pri(tl + hz * inner + tr))
+        print("  " + P.pri(vt) + P.grad(label) + " " * pad + P.pri(vt))
+        print("  " + P.pri(bl + hz * inner + br))
+    else:
+        print("  " + P.grad(label))
 
 def show_menu():
     clear()
     show_logo()
+    if logo_rows():
+        print()
+    gaps = spacing()
     print()
     print()
     split = (len(MENU) + 1) // 2
     left = MENU[:split]
     right = MENU[split:]
+    g = glyph("dot")
 
     def fmt(item):
         num, label, _ = item
-        return "  " + P.pri(f"[{num:>2}]") + " " + P.sec(f"{label:<26}")
+        width = 26 + gaps * 4
+        return "  " + P.pri(f"[{num:>2}]") + " " * gaps + P.sec(f"{label:<{width}}")
 
     for i in range(max(len(left), len(right))):
-        line = fmt(left[i]) if i < len(left) else " " * 34
+        line = fmt(left[i]) if i < len(left) else " " * (34 + gaps * 5)
         line += fmt(right[i]) if i < len(right) else ""
         print(line)
-    print()
+    for _ in range(gaps):
+        print()
     print("  " + P.dim("─" * (min(term_width(), 74) - 2)))
-    print("  " + P.dim("b = back  •  0 = exit  •  5 = updates  •  9 = settings"))
+    print("  " + P.dim(f"b = back {g} 0 = exit {g} 5 = updates {g} 9 = settings"))
     print("  " + P.dim("build: ") + build_tag())
     print()
 
 def boot():
     clear()
+    show_clock()
 
 def main():
     enable_ansi()
@@ -2026,6 +2551,14 @@ def main():
     fast = "--no-anim" in sys.argv or "--fast" in sys.argv
     if fast:
         CFG["animations"] = False
+    if "--setup" in sys.argv:
+        cmd_setup(CFG)
+    elif not CFG.get("setup_done", False) and "--no-setup" not in sys.argv:
+        try:
+            cmd_setup(CFG)
+        except BackException:
+            CFG["setup_done"] = True
+            save_settings(CFG)
     dispatch = {num: fn for num, _label, fn in MENU}
     labels = {num: label for num, label, _fn in MENU}
     me = sys.modules[__name__]

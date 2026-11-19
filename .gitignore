@@ -21,6 +21,11 @@ settings.json
 pack.json
 backups/
 
+# paid extension pack modules — free versions of these files are tracked,
+# so this only blocks the *untracked* paid-only module. Reinstalling the
+# pack materialises it in the tree; this keeps it out of git.
+tools_builder.py
+
 # compiled copy — rebuild with build_protected.py
 dist/
 
