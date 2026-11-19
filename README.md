@@ -72,7 +72,8 @@ the change.
 
 ## Themes
 
-`lightblue` (default), `bloody_red`, `pitchblack`, `matrix`, `cyber`, `amber`.
+`lightblue` (default), `bloody_red`, `pitchblack`, `matrix`, `cyber`, `amber`,
+`nord`, `dracula`, `solarized`, `forest`, `violet`, `ice`, `ember`.
 Set under Settings > 5. Stored in `settings.json`.
 
 ## Layout
