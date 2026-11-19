@@ -1,4 +1,4 @@
-"""nxtf0und multi-tool console."""
+"""foundation multi-tool console."""
 
 import base64
 import binascii
@@ -65,7 +65,7 @@ DEFAULT_SETTINGS = {
     "anim_style": "typewriter",
     "anim_speed": 1.0,
     "timeout": 8,
-    "user_agent": "Mozilla/5.0 (X11; Linux x86_64) nxtf0und/2.0",
+    "user_agent": "Mozilla/5.0 (X11; Linux x86_64) foundation/2.0",
     "theme": "lightblue",
     "custom_colors": {
         "pri": "#6ebeff", "sec": "#b2e4ff", "dim": "#7692ae",
@@ -594,7 +594,7 @@ def writable_dir(*parts):
         os.remove(probe)
         return primary
     except Exception:
-        fallback = os.path.join(tempfile.gettempdir(), "nxtf0und", *parts)
+        fallback = os.path.join(tempfile.gettempdir(), "foundation", *parts)
         os.makedirs(fallback, exist_ok=True)
         note(f"{os.path.join(*parts)} not writable — using {fallback}")
         return fallback
@@ -660,7 +660,7 @@ def cmd_webhook(cfg):
     url = ask("webhook url")
     if not url:
         return
-    message = ask("message", "nxtf0und online")
+    message = ask("message", "foundation online")
     count = ask("send count", "1")
     delay = ask("delay between sends (s)", "0.5")
     try:
@@ -669,7 +669,7 @@ def cmd_webhook(cfg):
     except ValueError:
         finding("MED", "bad count/delay")
         return
-    payload = json.dumps({"content": message, "username": "nxtf0und"}).encode()
+    payload = json.dumps({"content": message, "username": "foundation"}).encode()
     ok_n = 0
     for i in range(count):
         try:
@@ -1982,8 +1982,9 @@ def preview_everything(cfg):
     tl, tr, bl, br, hz, vt = border_chars()
     inner = 46
     if hz:
+        mark = " foundation // preview "
         print("  " + P.pri(tl + hz * inner + tr))
-        print("  " + P.pri(vt) + P.grad(" nxtf0und // preview ") + " " * (inner - 21) + P.pri(vt))
+        print("  " + P.pri(vt) + P.grad(mark) + " " * max(0, inner - len(mark)) + P.pri(vt))
         print("  " + P.pri(bl + hz * inner + br))
     section("glyphs")
     print("  " + P.sec("prompt ") + P.dim(glyph("prompt")))
@@ -2061,7 +2062,7 @@ logo = """
 """
 
 BANNER_ROWS = [ln for ln in logo.splitlines() if ln.strip()]
-VERSION = "5.7"
+VERSION = "5.8"
 
 PACK_PATH = os.path.join(BASE_DIR, "pack.json")
 UPGRADE_URL = "https://t.me/zerostate00"
@@ -2155,7 +2156,7 @@ def cmd_pack_install(nf):
         if r.error or r.status != 200 or not r.raw:
             nf.finding("HIGH", "download failed", r.error or f"http {r.status}")
             return
-        path = os.path.join(tempfile.gettempdir(), "nxtf0und-pack.zip")
+        path = os.path.join(tempfile.gettempdir(), "foundation-pack.zip")
         with open(path, "wb") as fh:
             fh.write(r.raw)
     else:
@@ -2412,7 +2413,7 @@ def run_submenu(me, title, entries):
         print("  " + P.dim("b = back  •  ") + build_tag())
         print()
         try:
-            choice = input("  " + P.pri(f"nxtf0und/{title}") + P.dim("$ ")).strip()
+            choice = input("  " + P.pri(f"foundation/{title}") + P.dim("$ ")).strip()
         except (EOFError, KeyboardInterrupt):
             print()
             return
@@ -2443,7 +2444,7 @@ def run_submenu(me, title, entries):
         pause()
 
 SLIM_ROWS = [
-    " n x t f 0 u n d ",
+    " f o u n d a t i o n ",
     " security research bench ",
 ]
 
@@ -2477,7 +2478,7 @@ def show_header(title):
     w = min(term_width(), 76)
     inner = w - 2
     tl, tr, bl, br, hz, vt = border_chars()
-    label = f" nxtf0und // {title} "
+    label = f" foundation // {title} "
     if len(label) > inner - 2:
         label = label[:inner - 3] + "… "
     pad = inner - len(label)
@@ -2566,7 +2567,7 @@ def main():
     while True:
         show_menu()
         try:
-            choice = input("  " + P.pri("nxtf0und@doxxed.com") + P.dim(":~$ ") + P.sec("")).strip()
+            choice = input("  " + P.pri("foundation@doxxed.com") + P.dim(":~$ ") + P.sec("")).strip()
         except (EOFError, KeyboardInterrupt):
             print()
             choice = "0"

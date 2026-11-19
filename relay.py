@@ -1,4 +1,4 @@
-"""nxtf0und relay — holds upstream API keys on the server and proxies calls.
+"""foundation relay — holds upstream API keys on the server and proxies calls.
 
 The client never sees an upstream key. It sends a per-user token, a service
 name, and a path; this server validates all three against an allowlist derived
@@ -6,8 +6,8 @@ from apikeys.SPECS, injects the real key, and returns the upstream JSON.
 
 Run it:
 
-    export NF_RELAY_KEYS=/etc/nxtf0und/relay-keys.env   # upstream keys
-    export NF_RELAY_USERS=/etc/nxtf0und/users.json      # per-user tokens
+    export NF_RELAY_KEYS=/etc/foundation/relay-keys.env   # upstream keys
+    export NF_RELAY_USERS=/etc/foundation/users.json      # per-user tokens
     python3 relay.py --port 8080
 
 Requests:
@@ -212,7 +212,7 @@ def upstream(service, path, query):
     if merged:
         url += ("&" if "?" in url else "?") + urllib.parse.urlencode(merged)
 
-    headers = {"User-Agent": "nxtf0und-relay/1.0", "Accept": "*/*"}
+    headers = {"User-Agent": "foundation-relay/1.0", "Accept": "*/*"}
     headers.update({k: v for k, v in spec["auth"](keys).items() if v})
 
     req = urllib.request.Request(url, headers=headers, method="GET")
@@ -241,7 +241,7 @@ def upstream(service, path, query):
 # --------------------------------------------------------------------------
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "nxtf0und-relay"
+    server_version = "foundation-relay"
     sys_version = ""
 
     def log_message(self, fmt, *args):
@@ -351,7 +351,7 @@ class Server(ThreadingHTTPServer):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="nxtf0und key relay")
+    parser = argparse.ArgumentParser(description="foundation key relay")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--keys", default=os.environ.get("NF_RELAY_KEYS", DEFAULT_KEYS_ENV))

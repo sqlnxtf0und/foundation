@@ -617,7 +617,7 @@ JWT_SECRETS = [
     "secret", "password", "changeme", "test", "1234", "12345", "admin",
     "jwt", "jwtsecret", "supersecret", "mysecret", "key", "private",
     "default", "dev", "qwerty", "letmein", "token", "auth", "s3cr3t",
-    "your-256-bit-secret", "secretkey", "jsonwebtoken", "nxtf0und",
+    "your-256-bit-secret", "secretkey", "jsonwebtoken", "foundation",
 ]
 
 def _b64url(raw):

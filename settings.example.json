@@ -1,8 +1,27 @@
 {
-  "animations": false,
+  "animations": true,
+  "anim_style": "typewriter",
   "anim_speed": 1.0,
   "timeout": 8,
-  "user_agent": "Mozilla/5.0 (X11; Linux x86_64) nxtf0und/5.3",
+  "user_agent": "Mozilla/5.0 (X11; Linux x86_64) foundation/5.8",
   "theme": "lightblue",
-  "save_reports": true
+  "custom_colors": {
+    "pri": "#6ebeff",
+    "sec": "#b2e4ff",
+    "dim": "#7692ae",
+    "ok": "#56e3aa",
+    "warn": "#ffc860",
+    "bad": "#ff6870"
+  },
+  "accent": "",
+  "font": "default",
+  "border": "double",
+  "glyphs": "unicode",
+  "density": "normal",
+  "logo": "block",
+  "color_mode": "truecolor",
+  "show_clock": false,
+  "show_build": true,
+  "save_reports": true,
+  "setup_done": false
 }

@@ -15,8 +15,8 @@ import zlib
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def cmd_info(nf):
-    nf.section("about nxtf0und")
-    nf.kv("name", "nxtf0und")
+    nf.section("about foundation")
+    nf.kv("name", "foundation")
     nf.kv("engine", f"python {sys.version.split()[0]}")
     nf.kv("display", f"theme: {nf.CFG.get('theme', 'lightblue')}")
     nf.kv("root", BASE_DIR)

@@ -9,7 +9,7 @@ import sys
 import time
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DIST = os.path.join(BASE, "dist", "nxtf0und")
+DIST = os.path.join(BASE, "dist", "foundation")
 
 MODULES = [
     "main.py",
@@ -29,7 +29,7 @@ if os.path.isfile(os.path.join(BASE, PACK_MODULE)):
     MODULES.append(PACK_MODULE)
 
 LAUNCHER = '''#!/usr/bin/env python3
-"""nxtf0und launcher — bytecode build."""
+"""foundation launcher — bytecode build."""
 import os
 import sys
 import warnings
@@ -89,7 +89,7 @@ def main():
         if os.path.isfile(src):
             shutil.copy2(src, os.path.join(DIST, extra))
 
-    launcher = os.path.join(DIST, "nxtf0und.py")
+    launcher = os.path.join(DIST, "foundation.py")
     with open(launcher, "w", encoding="utf-8") as fh:
         fh.write(LAUNCHER)
     os.chmod(launcher, 0o755)
@@ -99,13 +99,13 @@ def main():
 
     stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     with open(os.path.join(DIST, "BUILD.txt"), "w", encoding="utf-8") as fh:
-        fh.write(f"nxtf0und bytecode build\nbuilt: {stamp}\n"
+        fh.write(f"foundation bytecode build\nbuilt: {stamp}\n"
                  f"python: {sys.version.split()[0]}\n"
                  f"source bytes: {total_src:,}\n"
                  f"pyc bytes: {total_pyc:,}\n")
 
     print(f"\ndone — {total_pyc:,} B of bytecode, no .py beside it")
-    print(f"run: python3 {os.path.join(DIST, 'nxtf0und.py')}")
+    print(f"run: python3 {os.path.join(DIST, 'foundation.py')}")
     print(f"python target: {sys.version.split()[0]} (pyc is version locked)")
     return 0
 

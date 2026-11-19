@@ -133,7 +133,7 @@ SPECS = {
         "limit": (60, 1.0),
         "hint": "breach search needs a paid subscription",
         "auth": lambda k: {"hibp-api-key": k.get("HIBP_API_KEY", ""),
-                           "user-agent": "nxtf0und"},
+                           "user-agent": "foundation"},
     },
     "emailrep": {
         "label": "EmailRep",

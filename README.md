@@ -28,7 +28,7 @@ Windows uses `python main.py`.
 ## Running
 
 ```
-nxtf0und@doxxed.com:~$
+foundation@doxxed.com:~$
 ```
 
 | input | effect |

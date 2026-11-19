@@ -1,6 +1,6 @@
 # Disclaimer
 
-nxtf0und is published for education, security research and authorized
+foundation is published for education, security research and authorized
 testing.
 
 ## Permitted use

@@ -1,4 +1,4 @@
-"""Utilities for nxtf0und."""
+"""Utilities for foundation."""
 
 import base64
 import hashlib

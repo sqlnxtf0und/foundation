@@ -1,4 +1,4 @@
-"""Discord tooling for nxtf0und."""
+"""Discord tooling for foundation."""
 
 import base64
 import json
@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 
 API = "https://discord.com/api/v10"
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) nxtf0und/2.0"
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) foundation/2.0"
 
 def _req(nf, token, method, path, payload=None, bot=False, raw_url=None,
          retries=1):

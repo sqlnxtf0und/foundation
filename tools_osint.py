@@ -266,7 +266,7 @@ def collect_email(nf, email):
             except Exception:
                 pass
     rep = nf.http(f"https://emailrep.io/{email}", nf.CFG,
-                  extra_headers={"User-Agent": "nxtf0und-osint"})
+                  extra_headers={"User-Agent": "foundation-osint"})
     if not rep.error and rep.status == 200:
         try:
             data["emailrep"] = json.loads(rep.text)

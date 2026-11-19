@@ -1,8 +1,8 @@
 {
-  "version": "5.7",
+  "version": "5.8",
   "released": "2026-11-19",
   "repo": "sqlnxtf0und/foundation",
-  "notes": "foundation banner, seven additional themes",
+  "notes": "renamed to foundation, customization center, first-run setup",
   "files": [
     "main.py",
     "apikeys.py",

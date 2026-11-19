@@ -1,10 +1,10 @@
-"""Roblox tooling for nxtf0und."""
+"""Roblox tooling for foundation."""
 
 import json
 import urllib.error
 import urllib.request
 
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) nxtf0und/2.0"
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) foundation/2.0"
 
 
 def _rb(nf, method, url, payload=None, headers=None, retry_csrf=True):

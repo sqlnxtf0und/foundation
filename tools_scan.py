@@ -1,4 +1,4 @@
-"""Network scanner modules for nxtf0und."""
+"""Network scanner modules for foundation."""
 
 import concurrent.futures
 import ipaddress

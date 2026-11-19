@@ -235,12 +235,12 @@ To produce a copy without readable `.py` files:
 
 ```bash
 python3 build_protected.py
-python3 dist/nxtf0und/nxtf0und.py
+python3 dist/foundation/foundation.py
 ```
 
-Windows: `python build_protected.py`, then `python dist\nxtf0und\nxtf0und.py`.
+Windows: `python build_protected.py`, then `python dist\foundation\foundation.py`.
 
-The build writes `.pyc` modules and a launcher into `dist/nxtf0und/`. This is
+The build writes `.pyc` modules and a launcher into `dist/foundation/`. This is
 obfuscation, not encryption; bytecode can be decompiled. `.pyc` files only run
 on the Python version that produced them, so build on the machine that will
 run the result.
@@ -258,7 +258,7 @@ run the result.
 | `ModuleNotFoundError: phonenumbers` | optional extra missing | `pip install phonenumbers` |
 | borders show `????` or boxes | terminal encoding | Windows Terminal, `chcp 65001`, `PYTHONUTF8=1` |
 | menu exits immediately | exception on boot | run `python3 main.py` and read the traceback |
-| `Permission denied` on `loot/` | folder owned by root | tool falls back to `/tmp/nxtf0und`; or `sudo chown -R $USER .` |
+| `Permission denied` on `loot/` | folder owned by root | tool falls back to `/tmp/foundation`; or `sudo chown -R $USER .` |
 | nmap module reports not installed | binary missing | install nmap or use the internal scanner |
 | packet capture returns nothing | no root or no libpcap | `sudo python3 main.py`, install libpcap |
 
