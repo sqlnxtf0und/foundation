@@ -1,4 +1,4 @@
-# Installing and running nxtf0und
+# Installing and running foundation
 
 Windows, Linux and macOS. Python 3.9 or newer; 3.12 is tested. No key, licence
 or account.
