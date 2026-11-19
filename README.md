@@ -221,45 +221,6 @@ Tool update is also available as `u` at the prompt, Settings > 7, or
 `version.json`, copies replaced files into `backups/`, and restores any file
 that fails to compile.
 
-## Building a release
-
-`make_zip.py` produces the zip you hand to users:
-
-```bash
-python3 make_zip.py                     # foundation-<version>.zip
-python3 make_zip.py -o out.zip          # custom path
-python3 make_zip.py --check out.zip     # inspect an archive
-```
-
-The build ships only free tool files. It refuses to write an archive
-containing `.env`, `settings.json`, `pack.json`, `tools_builder.py` or
-`backups/`, and scans every file for key-shaped strings before adding it.
-
-Users upgrade from a zip through **5 > Updates**, or directly:
-
-```bash
-python3 main.py --install-pack pack.zip
-```
-
-Pack zips work whether `pack.json` sits at the archive root or inside a
-single folder, so `zip -r pack.zip folder/` is fine. A pack is accepted when
-it targets the current version or older; only a pack built for a newer tool
-is refused. To build a pack zip with corrected digests:
-
-```bash
-python3 make_zip.py --pack ./packfolder -o foundation-pack-1.5.zip
-```
-
-Two archives sit side by side in the project folder:
-
-| File | Purpose |
-|---|---|
-| `foundation-5.9.zip` | the tool — send this to new users |
-| `foundation-pack-1.5.zip` | the extension pack — send to paying users |
-
-The installer picks the pack automatically even when both are present.
-
-
 ## Upgrade
 
 The free build covers OSINT, network, web, utilities and the research suite.
