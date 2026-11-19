@@ -81,7 +81,6 @@ DEFAULT_SETTINGS = {
     "show_clock": False,
     "show_build": True,
     "save_reports": True,
-    "setup_done": False,
 }
 
 THEMES = {
@@ -483,9 +482,8 @@ def sweep_line():
     return
 
 def section(title):
-    print()
-    print("  " + P.pri(glyph("bullet")) + " " + P.bold(P.sec(title)))
-    print("  " + P.dim("─" * (min(term_width(), 74) - 2)))
+    rule = P.dim("─" * max(0, min(term_width(), 74) - 8 - len(title)))
+    print("  " + P.pri(glyph("bullet")) + " " + P.bold(P.sec(title)) + " " + rule)
 
 def kv(key, value, color=None):
     color = color or P.sec
@@ -2022,52 +2020,97 @@ def preview_everything(cfg):
     note("preview complete")
 
 
-def cmd_setup(nf):
-    """First-run wizard: walks a new install through the key options."""
+SETUP_STEPS = (
+    ("theme", "pick a theme", pick_theme),
+    ("anim_style", "animation style", None),
+    ("animations", "animations on/off", None),
+    ("logo", "logo style", None),
+    ("border", "border style", None),
+    ("density", "menu density", None),
+    ("glyphs", "glyph set", None),
+    ("color_mode", "colour mode", None),
+)
+
+
+def _setup_step(cfg, key, label, fn):
+    """Run one wizard step; returns False when the operator backs out."""
+    clear()
+    show_header(f"setup - {label}")
+    if fn:
+        fn(cfg)
+        return True
+    if key == "animations":
+        val = ask("enable animations? (y/n)", "y")
+        cfg["animations"] = val.lower().startswith("y")
+        return True
+    opts = _ENUMS.get(key)
+    if not opts:
+        return True
+    for i, name in enumerate(opts, 1):
+        print("  " + P.pri(f"[{i}]") + " " + P.sec(name))
+    val = ask(key, cfg.get(key, opts[0]))
+    if val.isdigit() and 1 <= int(val) <= len(opts):
+        cfg[key] = opts[int(val) - 1]
+    elif val in opts:
+        cfg[key] = val
+    return True
+
+
+def cmd_setup(nf, welcome=True):
+    """Graphic-configuration wizard. Nothing is persisted until it finishes."""
+    cfg = getattr(nf, "CFG", nf) if not isinstance(nf, dict) else nf
+    if welcome:
+        clear()
+        print()
+        print("  " + P.grad("  welcome to f o u n d a t i o n  "))
+        print()
+        print("  " + P.dim("graphics setup - changeable later in settings (9)"))
+        pause("start setup")
+    try:
+        for key, label, fn in SETUP_STEPS:
+            _setup_step(cfg, key, label, fn)
+            apply_live(cfg)
+    except BackException:
+        note("setup cancelled")
+        return False
+    clear()
+    show_header("setup preview")
+    preview_everything(cfg)
+    save_settings(cfg)
+    return True
+
+
+def startup_config(nf):
+    """Ask on every launch: keep the current look or build a fresh one."""
     cfg = getattr(nf, "CFG", nf) if not isinstance(nf, dict) else nf
     clear()
+    show_logo()
     print()
     print("  " + P.grad("  welcome to f o u n d a t i o n  "))
     print()
-    print("  " + P.dim("first run — a few quick choices, changeable later in settings (9)"))
-    pause("start setup")
-    steps = [
-        ("theme", "pick a theme", pick_theme),
-        ("anim_style", "animation style", None),
-        ("animations", "animations on/off", None),
-        ("logo", "logo style", None),
-        ("border", "border style", None),
-        ("density", "menu density", None),
-        ("glyphs", "glyph set", None),
-        ("color_mode", "colour mode", None),
-    ]
-    for key, label, fn in steps:
-        clear()
-        show_header("setup")
-        section(label)
-        if fn:
-            fn(cfg)
-        elif key == "animations":
-            val = ask("enable animations? (y/n)", "y")
-            cfg["animations"] = val.lower().startswith("y")
-        else:
-            opts = _ENUMS.get(key)
-            if opts:
-                for i, name in enumerate(opts, 1):
-                    print("  " + P.pri(f"[{i}]") + " " + P.sec(name))
-                val = ask(key, cfg.get(key, opts[0]))
-                if val.isdigit() and 1 <= int(val) <= len(opts):
-                    cfg[key] = opts[int(val) - 1]
-                elif val in opts:
-                    cfg[key] = val
+    print("  " + P.dim("current configuration"))
+    print()
+    kv("theme", cfg.get("theme", "lightblue"))
+    kv("animations", ("on" if cfg.get("animations") else "off")
+       + f"  ({cfg.get('anim_style', 'typewriter')})")
+    kv("logo / border", f"{cfg.get('logo', 'block')} / {cfg.get('border', 'double')}")
+    kv("font / density", f"{cfg.get('font', 'default')} / {cfg.get('density', 'normal')}")
+    kv("glyphs / colour", f"{cfg.get('glyphs', 'unicode')} / {cfg.get('color_mode', 'truecolor')}")
+    print()
+    print("  " + P.pri("[1]") + " " + P.sec("use current configuration"))
+    print("  " + P.pri("[2]") + " " + P.sec("create a new one"))
+    print()
+    try:
+        val = ask("choice", "1")
+    except BackException:
+        # backing out of the chooser means keep what is already configured
         apply_live(cfg)
-        save_settings(cfg)
-    cfg["setup_done"] = True
-    save_settings(cfg)
-    clear()
-    show_header("setup complete")
-    preview_everything(cfg)
-    pause("enter the bench")
+        return
+    if val.strip().startswith("2"):
+        cmd_setup(cfg, welcome=False)
+    else:
+        apply_live(cfg)
+
 
 logo = """
 ██████▒▒█████   █    ██  ███▄    █ ▓█████▄  ▄▄▄     ▄▄▄█████▓ ██▓ ▒█████   ███▄    █
@@ -2083,7 +2126,7 @@ logo = """
 """
 
 BANNER_ROWS = [ln for ln in logo.splitlines() if ln.strip()]
-VERSION = "5.8"
+VERSION = "5.9"
 
 PACK_PATH = os.path.join(BASE_DIR, "pack.json")
 UPGRADE_URL = "https://t.me/zerostate00"
@@ -2487,12 +2530,17 @@ def show_logo():
 
 
 def show_clock():
-    if not CFG.get("show_clock"):
-        return
     stamp = time.strftime("%a %d %b %Y  %H:%M:%S")
     w = min(term_width(), 76)
     pad = max(0, (w - len(stamp)) // 2)
     print(" " * pad + P.dim(stamp))
+
+
+def clock_line():
+    """Right-aligned clock for the menu footer, or empty when disabled."""
+    if not CFG.get("show_clock"):
+        return ""
+    return P.dim(time.strftime("%a %d %b %Y  %H:%M:%S"))
 
 
 def show_header(title):
@@ -2503,7 +2551,6 @@ def show_header(title):
     if len(label) > inner - 2:
         label = label[:inner - 3] + "… "
     pad = inner - len(label)
-    print()
     if hz:
         print("  " + P.pri(tl + hz * inner + tr))
         print("  " + P.pri(vt) + P.grad(label) + " " * pad + P.pri(vt))
@@ -2514,31 +2561,36 @@ def show_header(title):
 def show_menu():
     clear()
     show_logo()
-    if logo_rows():
-        print()
     gaps = spacing()
-    print()
     print()
     split = (len(MENU) + 1) // 2
     left = MENU[:split]
     right = MENU[split:]
     g = glyph("dot")
+    colw = 26
+    extra = max(0, gaps - 1)
 
     def fmt(item):
         num, label, _ = item
-        width = 26 + gaps * 4
-        return "  " + P.pri(f"[{num:>2}]") + " " * gaps + P.sec(f"{label:<{width}}")
+        pad = " " * gaps
+        return "  " + P.pri(f"[{num:>2}]") + pad + P.sec(f"{label:<{colw - 6 - gaps}}")
 
     for i in range(max(len(left), len(right))):
-        line = fmt(left[i]) if i < len(left) else " " * (34 + gaps * 5)
+        line = fmt(left[i]) if i < len(left) else " " * colw
         line += fmt(right[i]) if i < len(right) else ""
-        print(line)
-    for _ in range(gaps):
-        print()
+        print(line.rstrip())
+        for _ in range(extra):
+            print()
     print("  " + P.dim("─" * (min(term_width(), 74) - 2)))
-    print("  " + P.dim(f"b = back {g} 0 = exit {g} 5 = updates {g} 9 = settings"))
+    clock = clock_line()
+    hint = (f"b = back {g} 0 = exit {g} 5 = updates {g} 9 = settings {g} c = config")
+    if clock:
+        print("  " + P.dim(hint) + "   " + clock)
+    else:
+        print("  " + P.dim(hint))
     print("  " + P.dim("build: ") + build_tag())
     print()
+
 
 def boot():
     clear()
@@ -2575,12 +2627,11 @@ def main():
         CFG["animations"] = False
     if "--setup" in sys.argv:
         cmd_setup(CFG)
-    elif not CFG.get("setup_done", False) and "--no-setup" not in sys.argv:
+    elif "--no-setup" not in sys.argv and sys.stdin.isatty():
         try:
-            cmd_setup(CFG)
+            startup_config(CFG)
         except BackException:
-            CFG["setup_done"] = True
-            save_settings(CFG)
+            note("keeping current configuration")
     dispatch = {num: fn for num, _label, fn in MENU}
     labels = {num: label for num, label, _fn in MENU}
     me = sys.modules[__name__]
@@ -2595,6 +2646,12 @@ def main():
         if not choice:
             continue
         if choice.strip().lower() == "b":
+            continue
+        if choice.lower() == "c":
+            try:
+                startup_config(me)
+            except BackException:
+                note("back")
             continue
         if choice.lower() in ("u", "update"):
             try:

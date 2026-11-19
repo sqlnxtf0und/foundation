@@ -1,8 +1,8 @@
 {
-  "version": "5.8",
+  "version": "5.9",
   "released": "2026-11-19",
   "repo": "sqlnxtf0und/foundation",
-  "notes": "renamed to foundation, customization center, first-run setup",
+  "notes": "pack zips accept a nested folder, clock now renders, compact layout, graphic config chooser on every launch, make_zip.py release builder",
   "files": [
     "main.py",
     "apikeys.py",
@@ -21,6 +21,7 @@
     "requirements.txt",
     "README.md",
     "INSTALL.md",
-    "DISCLAIMER.md"
+    "DISCLAIMER.md",
+    "make_zip.py"
   ]
 }

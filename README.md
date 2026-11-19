@@ -135,9 +135,22 @@ Set under **Settings > 4** (browsable gallery with live swatches). Stored in
 
 ## Customization
 
-Everything about the interface is configurable, and a first-run wizard walks
-a new install through it. Re-run it any time with `python3 main.py --setup`,
-or skip it with `--no-setup`.
+Every launch asks whether to keep the current look or build a new one:
+
+```
+current configuration
+theme          lightblue
+animations     on  (typewriter)
+logo / border  block / double
+...
+[1] use current configuration
+[2] create a new one
+```
+
+Nothing is written until you finish, so choosing "create a new one" and backing
+out leaves your settings untouched. `python3 main.py --setup` goes straight to
+the wizard, and `--no-setup` starts immediately without asking. Press `c` at
+the prompt to reopen the chooser at any time.
 
 **Settings > 9** opens the customization center:
 
@@ -188,6 +201,7 @@ tools_advanced.py   reputation, CVE and research integration
 tools_system.py     system and anonymity utilities
 install_pack.py     upgrade pack installer
 build_protected.py  compiles the project to a bytecode copy in dist/
+make_zip.py         builds the distributable zip (and pack zips)
 ```
 
 ## Updates
@@ -206,6 +220,35 @@ Tool update is also available as `u` at the prompt, Settings > 7, or
 `python3 main.py --update`. The tool compares its version against the published
 `version.json`, copies replaced files into `backups/`, and restores any file
 that fails to compile.
+
+## Building a release
+
+`make_zip.py` produces the zip you hand to users:
+
+```bash
+python3 make_zip.py                     # foundation-<version>.zip
+python3 make_zip.py -o out.zip          # custom path
+python3 make_zip.py --check out.zip     # inspect an archive
+```
+
+The build ships only free tool files. It refuses to write an archive
+containing `.env`, `settings.json`, `pack.json`, `tools_builder.py` or
+`backups/`, and scans every file for key-shaped strings before adding it.
+
+Users upgrade from a zip through **5 > Updates**, or directly:
+
+```bash
+python3 main.py --install-pack pack.zip
+```
+
+Pack zips work whether `pack.json` sits at the archive root or inside a
+single folder, so `zip -r pack.zip folder/` is fine. To build a pack zip
+with a corrected manifest:
+
+```bash
+python3 make_zip.py --pack ./packfolder
+```
+
 
 ## Upgrade
 

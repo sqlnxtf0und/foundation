@@ -153,22 +153,46 @@ python3 main.py
 
 ---
 
-## First run
+## Install from a zip
 
-The first time you start the tool it opens a setup screen: theme, animation
-style, animations on/off, logo, border, density, glyphs and colour mode. Each
-choice previews live. When it finishes, a preview page renders every element at
-once.
-
-Re-run it any time:
+Grab `foundation-<version>.zip`, extract it anywhere, and run:
 
 ```bash
-python3 main.py --setup      # walk through setup again
-python3 main.py --no-setup   # start without the wizard
+python3 main.py
 ```
 
-Everything the wizard sets is also under **Settings > 9**, along with custom
-palettes, fonts, accent colour and animation speed.
+No build step is needed for the free tool; the standard library covers
+everything. Optional extras:
+
+```bash
+pip install -r requirements.txt   # only if you want the optional backends
+```
+
+## First run
+
+On every start the tool shows your current configuration and asks:
+
+```
+[1] use current configuration
+[2] create a new one
+```
+
+Choosing **1** starts immediately. Choosing **2** opens the graphics wizard:
+theme, animation style, animations on/off, logo, border, density, glyphs and
+colour mode, each previewing live, finishing with a render of every element.
+
+Nothing is saved until the wizard completes, so backing out (type `b`) leaves
+your existing settings exactly as they were.
+
+```bash
+python3 main.py              # asks on every launch
+python3 main.py --setup      # jump straight to the wizard
+python3 main.py --no-setup   # start without asking
+```
+
+Press `c` at the prompt to reopen the chooser later. Everything the wizard
+sets is also under **Settings > 9**, along with custom palettes, fonts, accent
+colour and animation speed.
 
 ```
 1 OSINT          usernames, email, phone, domains, IPs, certificates

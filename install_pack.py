@@ -26,10 +26,35 @@ def _base_version(base_dir):
         return ""
 
 
+def _find_prefix(zf):
+    """Locate pack.json at the archive root or inside a single folder.
+
+    Zip tools differ: `zip -r p.zip files/` nests everything under a
+    directory, while `zip -r p.zip .` keeps it flat. Accept both, but only
+    when the marker is unambiguous.
+    """
+    names = zf.namelist()
+    if MARKER in names:
+        return ""
+    nested = [n for n in names
+              if n.endswith("/" + MARKER) and not n.startswith("/")
+              and ".." not in n.split("/")]
+    if not nested:
+        raise ValueError(
+            "pack.json missing from archive - zip the files themselves, "
+            "not the folder")
+    if len(nested) > 1:
+        raise ValueError("archive contains more than one pack.json")
+    return nested[0][: -len(MARKER)]
+
+
 def _read_manifest(zf):
-    if MARKER not in zf.namelist():
-        raise ValueError("pack.json missing from archive")
-    manifest = json.loads(zf.read(MARKER).decode("utf-8"))
+    prefix = _find_prefix(zf)
+    raw = zf.read(prefix + MARKER)
+    try:
+        manifest = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"pack.json is not valid json: {exc}")
     if not isinstance(manifest, dict):
         raise ValueError("pack.json is not an object")
     files = manifest.get("files")
@@ -38,10 +63,12 @@ def _read_manifest(zf):
     for name, digest in files.items():
         if os.path.basename(name) != name or not name.endswith(".py"):
             raise ValueError(f"invalid module name: {name}")
-        if name not in zf.namelist():
+        member = prefix + name
+        if member not in zf.namelist():
             raise ValueError(f"missing module: {name}")
-        if _sha256(zf.read(name)) != digest:
+        if _sha256(zf.read(member)) != digest:
             raise ValueError(f"checksum mismatch: {name}")
+    manifest["_prefix"] = prefix
     return manifest
 
 
@@ -51,6 +78,7 @@ def install(zip_path, base_dir=None, force=False):
         raise ValueError(f"not a file: {zip_path}")
     with zipfile.ZipFile(zip_path) as zf:
         manifest = _read_manifest(zf)
+        prefix = manifest.pop("_prefix", "")
         files = manifest["files"]
         base = str(manifest.get("base") or "")
         current = _base_version(base_dir)
@@ -68,7 +96,7 @@ def install(zip_path, base_dir=None, force=False):
                 shutil.copy2(target, os.path.join(backup, name))
                 replaced.append(name)
             with open(target, "wb") as fh:
-                fh.write(zf.read(name))
+                fh.write(zf.read(prefix + name))
         manifest["installed"] = stamp
         manifest["previous"] = replaced
         with open(os.path.join(base_dir, MARKER), "w", encoding="utf-8") as fh:
@@ -121,10 +149,16 @@ def remove(base_dir=None):
 
 
 def _pick(base_dir):
+    """Choose a pack archive: prefer names containing 'pack'.
+
+    The folder also holds the distributable tool zip, which has no
+    pack.json, so a plain alphabetical pick would break upgrades.
+    """
     zips = sorted(n for n in os.listdir(base_dir) if n.lower().endswith(".zip"))
     if not zips:
         raise ValueError("no .zip in this folder")
-    return os.path.join(base_dir, zips[0])
+    packs = [n for n in zips if "pack" in n.lower()]
+    return os.path.join(base_dir, (packs or zips)[0])
 
 
 def main(argv):
