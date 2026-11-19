@@ -92,6 +92,13 @@ def remove(base_dir=None):
     stamp = manifest.get("installed")
     backup = os.path.join(base_dir, "backups", f"pack-{stamp}") if stamp else ""
     previous = set(manifest.get("previous") or [])
+    if previous:
+        if not backup or not os.path.isdir(backup):
+            raise ValueError("backup folder missing, nothing removed")
+        missing = [n for n in previous
+                   if not os.path.isfile(os.path.join(backup, n))]
+        if missing:
+            raise ValueError("backup incomplete: " + ", ".join(sorted(missing)))
     restored = []
     removed = []
     for name in manifest.get("files", {}):

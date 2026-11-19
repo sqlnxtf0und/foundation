@@ -46,7 +46,7 @@ nxtf0und@doxxed.com:~$
 | 2 | Network | host discovery, port scanning, DNS, TLS, HTTP headers, packet capture |
 | 3 | Web | content discovery, endpoint mapping, TLS inspection, site mirroring |
 | 4 | Utilities | hashing, encoding, metadata, local record search |
-| 5 | Extensions | optional module pack, install and status |
+| 5 | Updates | tool update, extension pack, dependencies |
 | 6 | Discord | server info and invite lookup |
 | 7 | Roblox | public API lookups |
 | 8 | Advanced | load testing, reputation checks, vulnerability research |
@@ -92,33 +92,43 @@ install_pack.py     installs or removes an extension pack
 build_protected.py  compiles the project to a bytecode copy in dist/
 ```
 
-## Extensions
+## Updates
 
-Sections marked optional are supplied as a separate pack. The pack is a single
-zip and installs into this folder without moving files elsewhere:
+Type `5` at the main menu.
+
+| item | action |
+|---|---|
+| 1 | read the published manifest and install a newer build |
+| 2 | install an extension pack from a zip or URL |
+| 3 | show pack name, version and module count |
+| 4 | remove the pack and restore the previous modules |
+| 5 | install `requirements.txt` |
+| 6 | install optional packages |
+
+The pack is a single zip and installs into this folder:
 
 ```bash
 python3 install_pack.py nxtf0und-pack-1.2.zip
 ```
 
-Alternative, from the tool: `5` > `2`, or `python3 main.py --install-pack`.
+Replaced files are copied to `backups/pack-<stamp>/` before the install. The
+installer verifies every module against the manifest and refuses a pack built
+for a different release unless `--force` is passed. Removal restores from that
+backup; if the backup is missing it stops rather than deleting modules.
 
-Installed modules are copied next to `main.py`. Replaced files are backed up
-under `backups/pack-<stamp>/`. Remove the pack with:
+Both actions offer to restart the tool, which is required for new modules to
+load. Remove from the command line with:
 
 ```bash
 python3 install_pack.py --remove
 ```
 
-Restart the tool after install or removal. The pack is versioned against the
-installed release; `install_pack.py` refuses a mismatch unless `--force` is
-passed. Reinstall the pack after updating the tool.
+Reinstall the pack after updating the tool.
 
-## Updating
-
-Press `u`, or Settings > 7. The tool compares its version against the published
-`version.json`, copies replaced files into `backups/`, and restores them if a
-download fails to compile.
+Tool update 1 is also available as `u` at the prompt, Settings > 7, or
+`python3 main.py --update`. The tool compares its version against the published
+`version.json`, copies replaced files into `backups/`, and restores any file
+that fails to compile.
 
 ## Intended use
 

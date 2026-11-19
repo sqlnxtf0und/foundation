@@ -160,7 +160,7 @@ python3 main.py
 2 Network        host and port scanning, DNS, TLS, headers, capture
 3 Web            content discovery, endpoint mapping, site mirroring
 4 Utilities      hashing, encoding, metadata, local record search
-5 Extensions     optional module pack, install and status
+5 Updates        tool update, extension pack, dependencies
 6 Discord        server and webhook lookups
 7 Roblox         public API lookups
 8 Advanced       load testing, reputation, vulnerability research
@@ -196,27 +196,37 @@ where possible.
 
 ---
 
-## Extension pack
+## Updates
 
-The pack is a zip containing modules and a manifest. Install from this folder:
+`5` at the main menu opens the update and install menu.
+
+```
+1 Tool update              read the published manifest, install a newer build
+2 Install extension pack   zip path or http(s) url
+3 Pack status
+4 Remove extension pack
+5 Install dependencies     pip install -r requirements.txt
+6 Optional packages        phonenumbers, pysocks
+```
+
+The command line equivalents:
 
 ```bash
 python3 install_pack.py nxtf0und-pack-1.2.zip
-```
-
-Without a filename, the installer uses the first `.zip` in the folder. Other
-entry points:
-
-```bash
 python3 main.py --install-pack nxtf0und-pack-1.2.zip
 python3 install_pack.py --remove
 ```
 
-The installer verifies each module checksum against the manifest, copies files
-that already exist into `backups/pack-<stamp>/`, and writes `pack.json`. It
-refuses a pack built for a different release unless `--force` is passed.
-Restart the tool after installing or removing. Reinstall the pack after a tool
-update.
+The installer verifies each module checksum, copies files that already exist
+into `backups/pack-<stamp>/`, and writes `pack.json`. It refuses a pack built
+for a different release unless `--force` is passed. Removal restores from the
+backup and aborts if the backup is incomplete. Restart the tool after install
+or removal. Reinstall the pack after a tool update.
+
+Tool update is also available as `u` at the prompt, `9` then `7`, or
+`python3 main.py --update`. It copies every replaced file into
+`backups/update-<stamp>/`, downloads the changed modules, compiles each one,
+and restores the backup if a file fails.
 
 ---
 
@@ -235,20 +245,6 @@ The build writes `.pyc` modules and a launcher into `dist/nxtf0und/`. This is
 obfuscation, not encryption; bytecode can be decompiled. `.pyc` files only run
 on the Python version that produced them, so build on the machine that will
 run the result.
-
----
-
-## Updating
-
-Any of:
-
-- `u` at the main prompt
-- `9`, then `7`
-- `python3 main.py --update`
-
-The updater reads the published version file, compares versions, copies every
-file it replaces into `backups/update-<stamp>/`, downloads the changed files,
-compiles each one, and restores the backup if a file fails.
 
 ---
 

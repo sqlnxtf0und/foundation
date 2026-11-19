@@ -4,6 +4,7 @@ import base64
 import binascii
 import concurrent.futures
 import hashlib
+import importlib.util
 import json
 import os
 import platform
@@ -1415,8 +1416,8 @@ def cmd_update(nf, force=False):
     for name, reason in failed:
         finding("MED", f"skipped {name}", reason)
     if written:
-        finding("OK", "restart nxtf0und to load the new build")
-        note("deps changed? pip install -r requirements.txt")
+        finding("OK", "update applied")
+        offer_restart(nf)
 
 def cmd_settings(cfg):
     while True:
@@ -1554,13 +1555,23 @@ def cmd_pack_status(nf):
 
 
 def cmd_pack_install(nf):
-    nf.section("install pack")
+    nf.section("install extension pack")
     zips = sorted(n for n in os.listdir(BASE_DIR) if n.lower().endswith(".zip"))
-    path = nf.ask("pack zip", zips[0] if zips else "")
-    if not path:
+    source = nf.ask("pack zip or url", zips[0] if zips else "")
+    if not source:
         return
-    if not os.path.isabs(path):
-        path = os.path.join(BASE_DIR, path)
+    if source.lower().startswith(("http://", "https://")):
+        nf.loading("downloading pack")
+        r = nf.http(source, nf.CFG, body_limit=40_000_000,
+                    timeout=max(30, nf.CFG["timeout"]))
+        if r.error or r.status != 200 or not r.raw:
+            nf.finding("HIGH", "download failed", r.error or f"http {r.status}")
+            return
+        path = os.path.join(tempfile.gettempdir(), "nxtf0und-pack.zip")
+        with open(path, "wb") as fh:
+            fh.write(r.raw)
+    else:
+        path = source if os.path.isabs(source) else os.path.join(BASE_DIR, source)
     try:
         import install_pack
         messages = install_pack.install(path, BASE_DIR)
@@ -1569,7 +1580,91 @@ def cmd_pack_install(nf):
         return
     for line in messages:
         nf.note(line)
-    nf.finding("OK", "pack installed", "restart the tool")
+    nf.finding("OK", "pack installed")
+    offer_restart(nf)
+
+
+def offer_restart(nf):
+    if nf.ask("restart now? (y/n)", "y").lower()[:1] == "y":
+        note("restarting")
+        time.sleep(0.2)
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+        return True
+    nf.note("restart later to load the change")
+    return False
+
+
+def cmd_pack_remove(nf):
+    nf.section("remove extension pack")
+    if not pack_installed():
+        nf.finding("INFO", "no pack installed")
+        return
+    if nf.ask("remove installed pack? (y/n)", "n").lower()[:1] != "y":
+        nf.note("not removed")
+        return
+    try:
+        import install_pack
+        messages = install_pack.remove(BASE_DIR)
+    except Exception as exc:
+        nf.finding("HIGH", "remove failed", str(exc)[:200])
+        return
+    for line in messages:
+        nf.note(line)
+    offer_restart(nf)
+
+
+def _pip(nf, packages):
+    cmd = [sys.executable, "-m", "pip", "install", *packages]
+    nf.note("running: " + " ".join(cmd))
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    except Exception as exc:
+        nf.finding("HIGH", "pip failed", str(exc)[:160])
+        return False
+    output = (proc.stdout or "") + (proc.stderr or "")
+    for line in output.strip().splitlines()[-8:]:
+        nf.note(line[:120])
+    nf.finding("OK" if proc.returncode == 0 else "HIGH", "pip exit",
+               str(proc.returncode))
+    return proc.returncode == 0
+
+
+def cmd_deps(nf):
+    nf.section("dependencies")
+    nf.kv("python", sys.version.split()[0])
+    req = os.path.join(BASE_DIR, "requirements.txt")
+    if not os.path.isfile(req):
+        nf.finding("HIGH", "requirements.txt missing")
+        return
+    with open(req, encoding="utf-8") as fh:
+        packages = [ln.strip() for ln in fh
+                    if ln.strip() and not ln.strip().startswith("#")]
+    for name in packages:
+        nf.kv("package", name)
+    if nf.ask("install requirements now? (y/n)", "y").lower()[:1] != "y":
+        nf.note("not installed")
+        return
+    _pip(nf, ["-r", req])
+
+
+OPTIONAL_PACKAGES = ["phonenumbers", "pysocks"]
+
+def cmd_optional(nf):
+    nf.section("optional packages")
+    missing = []
+    for name in OPTIONAL_PACKAGES:
+        found = importlib.util.find_spec(name) is not None
+        nf.kv(name, "installed" if found else "missing",
+               nf.P.ok if found else nf.P.warn)
+        if not found:
+            missing.append(name)
+    if not missing:
+        nf.finding("OK", "nothing to install")
+        return
+    if nf.ask("install missing? (y/n)", "y").lower()[:1] != "y":
+        nf.note("not installed")
+        return
+    _pip(nf, missing)
 
 
 OSINT_MENU = _menu(
@@ -1642,9 +1737,13 @@ UTIL_MENU = _menu(
     ("Files / Site", tools_system.cmd_site),
 )
 
-EXT_MENU = _menu(
+UPDATE_MENU = _menu(
+    ("Tool update", lambda nf: cmd_update(nf)),
+    ("Install extension pack", lambda nf: cmd_pack_install(nf)),
     ("Pack status", lambda nf: cmd_pack_status(nf)),
-    ("Install pack", lambda nf: cmd_pack_install(nf)),
+    ("Remove extension pack", lambda nf: cmd_pack_remove(nf)),
+    ("Install dependencies", lambda nf: cmd_deps(nf)),
+    ("Optional packages", lambda nf: cmd_optional(nf)),
     *pack_entries("extensions"),
 )
 
@@ -1703,7 +1802,7 @@ MENU = [
     ("2", "Network", lambda nf: run_submenu(nf, "network", NETWORK_MENU)),
     ("3", "Web", lambda nf: run_submenu(nf, "web", WEB_MENU)),
     ("4", "Utilities", lambda nf: run_submenu(nf, "utilities", UTIL_MENU)),
-    ("5", "Extensions", lambda nf: run_submenu(nf, "extensions", EXT_MENU)),
+    ("5", "Updates", lambda nf: run_submenu(nf, "updates", UPDATE_MENU)),
     ("6", "Discord", lambda nf: run_submenu(nf, "discord", DISCORD_MENU)),
     ("7", "Roblox", lambda nf: run_submenu(nf, "roblox", ROBLOX_MENU)),
     ("8", "Advanced", lambda nf: run_submenu(nf, "advanced", ADVANCED_MENU)),
@@ -1791,7 +1890,7 @@ def show_menu():
         print(line)
     print()
     print("  " + P.dim("─" * (min(term_width(), 74) - 2)))
-    print("  " + P.dim("b = back  •  0 = exit  •  u = update  •  9 = settings"))
+    print("  " + P.dim("b = back  •  0 = exit  •  5 = updates  •  9 = settings"))
     print()
 
 def boot():
