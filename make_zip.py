@@ -138,10 +138,6 @@ def build_pack(src_dir, out_path):
     total = 0
     added = []
     with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        raw = open(marker, "rb").read()
-        zf.writestr("pack.json", raw)
-        total += len(raw)
-        added.append("pack.json")
         for name, digest in modules.items():
             if os.path.basename(name) != name:
                 raise SystemExit(f"invalid module name: {name}")
@@ -156,7 +152,11 @@ def build_pack(src_dir, out_path):
             zf.writestr(name, data)
             total += len(data)
             added.append(name)
-        zf.writestr("pack.json", json.dumps(manifest, indent=2))
+        # pack.json goes in exactly once, after the digests above are final
+        raw = json.dumps(manifest, indent=2).encode("utf-8")
+        zf.writestr("pack.json", raw)
+        total += len(raw)
+        added.insert(0, "pack.json")
     return added, total
 
 

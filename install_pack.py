@@ -72,6 +72,26 @@ def _read_manifest(zf):
     return manifest
 
 
+def _version_tuple(text):
+    return tuple(int(p) if p.isdigit() else 0 for p in str(text).split(".")[:2])
+
+
+def _check_base(base, current, force):
+    """Only a pack built for a *newer* tool is unsafe.
+
+    Packs target a base version but are almost always forward-compatible: a
+    5.7 pack installs cleanly on 5.9. Blocking on any difference made every
+    upgrade fail with a version-mismatch error, so compare numerically and
+    refuse only when the pack expects features the tool does not have yet.
+    """
+    if not base or not current or force:
+        return
+    if _version_tuple(base) > _version_tuple(current):
+        raise ValueError(
+            f"pack targets {base}, installed tool is {current}; "
+            f"update the tool to {base} first (or pass --force)")
+
+
 def install(zip_path, base_dir=None, force=False):
     base_dir = os.path.abspath(base_dir or os.path.dirname(os.path.abspath(__file__)))
     if not os.path.isfile(zip_path):
@@ -80,12 +100,7 @@ def install(zip_path, base_dir=None, force=False):
         manifest = _read_manifest(zf)
         prefix = manifest.pop("_prefix", "")
         files = manifest["files"]
-        base = str(manifest.get("base") or "")
-        current = _base_version(base_dir)
-        if base and current and base != current and not force:
-            raise ValueError(
-                f"pack targets {base}, installed tool is {current}; "
-                f"update the tool or pass --force")
+        _check_base(str(manifest.get("base") or ""), _base_version(base_dir), force)
         stamp = time.strftime("%Y%m%d-%H%M%S")
         backup = os.path.join(base_dir, "backups", f"pack-{stamp}")
         os.makedirs(backup, exist_ok=True)
@@ -108,6 +123,37 @@ def install(zip_path, base_dir=None, force=False):
         f"backup: {backup}",
         "restart the tool",
     ]
+
+
+def pack_info(base_dir=None):
+    """Return the installed manifest, or None when no pack is active."""
+    base_dir = os.path.abspath(base_dir or os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(base_dir, MARKER)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def stray_packs(base_dir=None):
+    """Zip files in the folder that look like packs but are not archives we can read."""
+    base_dir = os.path.abspath(base_dir or os.path.dirname(os.path.abspath(__file__)))
+    ok, bad = [], []
+    for name in sorted(os.listdir(base_dir)):
+        if not name.lower().endswith(".zip"):
+            continue
+        path = os.path.join(base_dir, name)
+        try:
+            with zipfile.ZipFile(path) as zf:
+                _find_prefix(zf)
+            ok.append(name)
+        except (zipfile.BadZipFile, ValueError):
+            bad.append(name)
+    return ok, bad
 
 
 def remove(base_dir=None):

@@ -2209,9 +2209,20 @@ def cmd_pack_status(nf):
 
 def cmd_pack_install(nf):
     nf.section("install extension pack")
-    zips = sorted(n for n in os.listdir(BASE_DIR) if n.lower().endswith(".zip"))
-    source = nf.ask("pack zip or url", zips[0] if zips else "")
+    try:
+        import install_pack
+        good, bad = install_pack.stray_packs(BASE_DIR)
+    except Exception:
+        good, bad = [], []
+    default = good[0] if good else ""
+    source = nf.ask("pack zip, url, or full path", default)
     if not source:
+        nf.note("cancelled")
+        return
+    if bad and not good:
+        nf.note("no usable pack zip found")
+        for name in bad:
+            nf.note(f"  {name} has no packed modules")
         return
     if source.lower().startswith(("http://", "https://")):
         nf.loading("downloading pack")

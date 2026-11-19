@@ -242,12 +242,22 @@ python3 main.py --install-pack pack.zip
 ```
 
 Pack zips work whether `pack.json` sits at the archive root or inside a
-single folder, so `zip -r pack.zip folder/` is fine. To build a pack zip
-with a corrected manifest:
+single folder, so `zip -r pack.zip folder/` is fine. A pack is accepted when
+it targets the current version or older; only a pack built for a newer tool
+is refused. To build a pack zip with corrected digests:
 
 ```bash
-python3 make_zip.py --pack ./packfolder
+python3 make_zip.py --pack ./packfolder -o foundation-pack-1.5.zip
 ```
+
+Two archives sit side by side in the project folder:
+
+| File | Purpose |
+|---|---|
+| `foundation-5.9.zip` | the tool — send this to new users |
+| `foundation-pack-1.5.zip` | the extension pack — send to paying users |
+
+The installer picks the pack automatically even when both are present.
 
 
 ## Upgrade
