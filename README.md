@@ -79,34 +79,6 @@ Requests are rate-limited per service and cached under `reports/.cache/` so
 repeated lookups return instantly. A missing key never errors — the affected
 lookup is simply skipped and the free path is used instead.
 
-## Relay (shared keys)
-
-To give users enrichment without distributing your own keys, run the relay
-host side and point clients at it.
-
-On the relay host:
-
-```bash
-cp relay-keys.example.env relay-keys.env     # fill in upstream keys here
-cp relay-users.example.json relay-users.json
-python3 relay.py --new-token alice           # prints the token once
-# paste its token_sha256 into relay-users.json
-python3 relay.py --host 0.0.0.0 --port 8080
-```
-
-On the client, set both values (or use **Settings → 9 → r**):
-
-```bash
-NF_RELAY_URL=https://relay.example.com
-NF_RELAY_TOKEN=alice-token-from-relay
-```
-
-When the relay is configured it takes precedence over local keys; upstream
-credentials never reach the client. The relay validates every request against
-an allowlist built from the service registry, so it cannot be used to reach an
-arbitrary host. Per-user rate limits and daily quotas apply before any upstream
-call is made. Run it behind TLS — put it behind nginx/Caddy, not bare HTTP.
-
 ## Reports
 
 Reports are written only after confirmation. Every report prompts
