@@ -1495,7 +1495,7 @@ logo = """
 """
 
 BANNER_ROWS = [ln for ln in logo.splitlines() if ln.strip()]
-VERSION = "5.4"
+VERSION = "5.5"
 
 PACK_PATH = os.path.join(BASE_DIR, "pack.json")
 

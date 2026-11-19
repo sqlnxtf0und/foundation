@@ -212,8 +212,8 @@ where possible.
 The command line equivalents:
 
 ```bash
-python3 install_pack.py nxtf0und-pack-1.2.zip
-python3 main.py --install-pack nxtf0und-pack-1.2.zip
+python3 install_pack.py nxtf0und-pack-1.3.zip
+python3 main.py --install-pack nxtf0und-pack-1.3.zip
 python3 install_pack.py --remove
 ```
 

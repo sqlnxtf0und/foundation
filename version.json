@@ -1,8 +1,8 @@
 {
-  "version": "5.4",
+  "version": "5.5",
   "released": "2026-11-19",
   "repo": "sqlnxtf0und/foundation",
-  "notes": "extension pack loader, reduced default module set, b-only navigation",
+  "notes": "updates menu: tool update, extension pack install/remove, dependency install",
   "files": [
     "main.py",
     "tools_osint.py",

@@ -108,7 +108,7 @@ Type `5` at the main menu.
 The pack is a single zip and installs into this folder:
 
 ```bash
-python3 install_pack.py nxtf0und-pack-1.2.zip
+python3 install_pack.py nxtf0und-pack-1.3.zip
 ```
 
 Replaced files are copied to `backups/pack-<stamp>/` before the install. The
