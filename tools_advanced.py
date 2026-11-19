@@ -15,6 +15,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import apikeys
+
 
 def _json(nf, url, headers=None, body_limit=2_000_000):
     r = nf.http(url, nf.CFG, extra_headers=headers, body_limit=body_limit,
@@ -61,6 +63,7 @@ def cmd_dnsbl(nf):
                 listed.append(res)
                 nf.finding("HIGH", "listed", res)
     nf.finding("OK" if not listed else "MED", f"{len(listed)} blacklist hit(s)")
+    apikeys.render_ip_context(nf, apikeys.ip_context(nf, ip))
 
 def cmd_cve(nf):
     nf.section("cve lookup")
@@ -224,11 +227,26 @@ def cmd_breach(nf):
     if not email:
         return
     nf.loading("checking breach indexes")
+    hits = apikeys.hibp_account(nf, email)
+    if hits:
+        nf.section(f"haveibeenpwned — {len(hits)} breach(es)")
+        for row in hits[:40]:
+            name = row.get("Name") or "?"
+            date = (row.get("BreachDate") or "")[:10]
+            classes = ", ".join(row.get("DataClasses") or [])[:80]
+            nf.finding("HIGH", name, f"{date}  {classes}")
+        nf.save_report(f"breach_{email.split('@')[0]}", hits)
+    elif hits == []:
+        nf.finding("OK", "no breach records for this address")
+    elif nf.KEYS.available("hibp"):
+        nf.finding("MED", "hibp query failed — check the subscription or key")
+    else:
+        nf.note("set HIBP_API_KEY under Settings -> 9 for breach search")
     data = _json(nf, f"https://api.xposedornot.com/v1/check-email/{urllib.parse.quote(email)}")
     if data:
         breaches = data.get("breaches") or data.get("Breaches") or []
         if isinstance(breaches, list) and breaches:
-            nf.section("breaches")
+            nf.section("xposedornot")
             flat = []
             for entry in breaches:
                 if isinstance(entry, list):
@@ -237,10 +255,16 @@ def cmd_breach(nf):
                     flat.append(entry)
             for name in flat[:30]:
                 nf.finding("HIGH", str(name))
-        else:
-            nf.finding("OK", "no public breach hits")
-    else:
-        nf.finding("MED", "breach api returned nothing")
+    profile = apikeys.emailrep(nf, email)
+    if isinstance(profile, dict) and profile.get("reputation"):
+        nf.section("emailrep")
+        nf.kv("reputation", profile.get("reputation"))
+        nf.kv("suspicious", "yes" if profile.get("suspicious") else "no",
+              nf.P.warn if profile.get("suspicious") else nf.P.ok)
+        details = profile.get("details") or {}
+        exposed = [k for k, v in details.items() if v is True]
+        if exposed:
+            nf.kv("exposed", ", ".join(exposed[:10]))
     nf.note("local corpus: put dumps in ./db and use Utilities -> Search In DataBase")
 
 def cmd_github(nf):

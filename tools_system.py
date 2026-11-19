@@ -33,6 +33,7 @@ def cmd_site(nf):
     entries = ["main.py", "tools_osint.py", "tools_scan.py", "tools_extra.py",
                "tools_hunt.py", "tools_utils.py", "tools_discord.py",
                "tools_roblox.py", "tools_advanced.py", "tools_system.py",
+               "apikeys.py", "relay.py", "LICENSE", ".env.example",
                "install_pack.py", "requirements.txt", "settings.json"]
     for name in entries:
         path = os.path.join(BASE_DIR, name)

@@ -15,6 +15,8 @@ import subprocess
 import time
 import urllib.parse
 
+import apikeys
+
 MAX_PAYLOAD_MULT = 30
 
 def _host(url):
@@ -150,6 +152,7 @@ def cmd_version_audit(nf):
             nf.finding(sev, f"{cve}  cvss {score:.1f}", f"{name}: {summary}")
             total += 1
     nf.finding("OK" if total else "INFO", f"{total} cve hit(s) across {len(tech)} tech(s)")
+    apikeys.domain_reputation(nf, _host(url))
     nf.save_report(f"version_audit_{_host(url)}", {"url": url, "tech": tech, "hits": total})
 
 def cmd_exploit_lookup(nf):

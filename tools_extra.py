@@ -11,6 +11,8 @@ import subprocess
 import time
 import urllib.parse
 
+import apikeys
+
 def cmd_headers(nf):
     raw = nf.ask("url")
     if not raw:
@@ -439,6 +441,7 @@ def cmd_shodan(nf):
             nf.finding("HIGH", "known vuln", cve)
     else:
         nf.finding("OK", "no listed cves")
+    apikeys.render_ip_context(nf, apikeys.ip_context(nf, ip))
     nf.save_report(f"shodan_{ip}", data)
 
 def cmd_exif(nf):

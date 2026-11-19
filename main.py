@@ -36,6 +36,7 @@ import tools_system
 import tools_roblox
 import tools_scan
 import tools_utils
+import apikeys
 
 try:
     import requests
@@ -109,6 +110,7 @@ def save_settings(cfg):
         return False
 
 CFG = load_settings()
+KEYS = apikeys.Keyring()
 
 def _clamp(v):
     return max(0, min(255, int(v)))
@@ -1427,6 +1429,71 @@ def cmd_update(nf, force=False):
         finding("OK", "update applied")
         offer_restart(nf)
 
+def cmd_apikeys(cfg):
+    while True:
+        clear()
+        show_header("api keys")
+        section(f"key store — {apikeys.ENV_PATH}")
+        names = list(apikeys.ORDER)
+        for i, name in enumerate(names, 1):
+            spec = apikeys.SPECS[name]
+            on = KEYS.available(name)
+            kv(f"{i:>2} {spec['label']}", "set" if on else "not set",
+               P.ok if on else P.dim)
+        relay = apikeys.relay_config()
+        section("relay")
+        kv("url", relay["url"] or "not set",
+           P.ok if relay["url"] else P.dim)
+        kv("token", "set" if relay["token"] else "not set",
+           P.ok if relay["token"] else P.dim)
+        kv("transport", "relay" if apikeys.relay_enabled() else "direct")
+        kv(" r  configure relay", "")
+        kv(" c  clear response cache", "")
+        kv(" 0  back", "")
+        note("relay takes precedence; keys stay on the relay host")
+        choice = ask("service")
+        if choice in ("", "0"):
+            return
+        if choice.lower() == "r":
+            clear()
+            show_header("relay")
+            note("leave a field blank to keep the current value")
+            url = ask(f"relay url [{relay['url'] or 'not set'}]")
+            token = ask("relay token [hidden]")
+            updates = {}
+            if url:
+                updates[apikeys.RELAY_URL_VAR] = url.rstrip("/")
+            if token:
+                updates[apikeys.RELAY_TOKEN_VAR] = token
+            if updates:
+                apikeys.write_env(updates)
+                KEYS.reload()
+            loading("saved")
+            continue
+        if choice.lower() == "c":
+            removed = apikeys.clear_cache()
+            note(f"removed {removed} cached response(s)")
+            pause()
+            continue
+        if not choice.isdigit() or not (1 <= int(choice) <= len(names)):
+            note("no such service")
+            pause()
+            continue
+        name = names[int(choice) - 1]
+        spec = apikeys.SPECS[name]
+        clear()
+        show_header(spec["label"])
+        note(spec.get("hint", ""))
+        note("ignored while the relay is active")
+        for var in spec["env"]:
+            current = os.environ.get(var, "")
+            prompt = var + (" [set — blank keeps current]" if current else "")
+            value = ask(prompt)
+            if value:
+                apikeys.write_env({var: value})
+        KEYS.reload()
+        loading("saved")
+
 def cmd_settings(cfg):
     while True:
         clear()
@@ -1442,6 +1509,7 @@ def cmd_settings(cfg):
            P.ok if cfg["save_reports"] else P.bad)
         kv("7  check for updates", f"github:{UPDATE_REPO}")
         kv("8  reset defaults", "")
+        kv("9  api keys", "manage external services")
         kv("0  back", "")
         choice = ask("setting")
         if choice in ("", "0"):
@@ -1485,6 +1553,8 @@ def cmd_settings(cfg):
                 for k, v in DEFAULT_SETTINGS.items():
                     cfg[k] = v
                 P.set(cfg["theme"])
+        elif choice == "9":
+            cmd_apikeys(cfg)
         save_settings(cfg)
         loading("saved")
 

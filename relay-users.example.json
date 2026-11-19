@@ -1,0 +1,9 @@
+{
+  "users": [
+    {
+      "name": "premium-user",
+      "token_sha256": "<run: python3 relay.py --new-token NAME>",
+      "daily_quota": 5000
+    }
+  ]
+}

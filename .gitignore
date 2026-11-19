@@ -23,3 +23,8 @@ backups/
 
 # compiled copy — rebuild with build_protected.py
 dist/
+
+# relay secrets — never commit
+relay-keys.env
+relay-users.json
+*.relay.tokens

@@ -5,6 +5,9 @@
   "notes": "foundation banner, seven additional themes",
   "files": [
     "main.py",
+    "apikeys.py",
+    "relay.py",
+    "LICENSE",
     "tools_osint.py",
     "tools_scan.py",
     "tools_extra.py",
