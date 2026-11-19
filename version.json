@@ -1,0 +1,23 @@
+{
+  "version": "5.4",
+  "released": "2026-11-19",
+  "repo": "sqlnxtf0und/foundation",
+  "notes": "extension pack loader, reduced default module set, b-only navigation",
+  "files": [
+    "main.py",
+    "tools_osint.py",
+    "tools_scan.py",
+    "tools_extra.py",
+    "tools_hunt.py",
+    "tools_utils.py",
+    "tools_discord.py",
+    "tools_roblox.py",
+    "tools_advanced.py",
+    "tools_system.py",
+    "install_pack.py",
+    "requirements.txt",
+    "README.md",
+    "INSTALL.md",
+    "DISCLAIMER.md"
+  ]
+}

@@ -1,0 +1,25 @@
+__pycache__/
+*.pyo
+.venv/
+venv/
+.env
+
+*.zip
+
+# runtime output
+reports/*
+builds/*
+loot/*
+dox/*
+!reports/.gitkeep
+!builds/.gitkeep
+!loot/.gitkeep
+!dox/.gitkeep
+
+# local settings
+settings.json
+pack.json
+backups/
+
+# compiled copy — rebuild with build_protected.py
+dist/
