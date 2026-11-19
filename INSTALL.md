@@ -253,24 +253,6 @@ Additional modules are available as a paid upgrade: [t.me/zerostate00](https://t
 
 ---
 
-## Bytecode build
-
-To produce a copy without readable `.py` files:
-
-```bash
-python3 build_protected.py
-python3 dist/foundation/foundation.py
-```
-
-Windows: `python build_protected.py`, then `python dist\foundation\foundation.py`.
-
-The build writes `.pyc` modules and a launcher into `dist/foundation/`. This is
-obfuscation, not encryption; bytecode can be decompiled. `.pyc` files only run
-on the Python version that produced them, so build on the machine that will
-run the result.
-
----
-
 ## Troubleshooting
 
 | symptom | cause | fix |
