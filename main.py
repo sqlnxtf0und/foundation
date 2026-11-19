@@ -1649,7 +1649,8 @@ def cmd_update(nf, force=False):
         finding("OK", "update applied")
         offer_restart(nf)
 
-def cmd_apikeys(cfg):
+def cmd_apikeys(nf):
+    cfg = getattr(nf, "CFG", nf) if not isinstance(nf, dict) else nf
     while True:
         clear()
         show_header("api keys")
@@ -1865,13 +1866,14 @@ def cycle(cfg, key, options):
     return cfg[key]
 
 
-def cmd_settings(cfg):
-    labels = {
+def settings_labels(cfg):
+    """Built fresh on every render so the menu always shows live values."""
+    return {
         "1": ("animations", "on" if cfg["animations"] else "off"),
         "2": ("animation style", cfg.get("anim_style", "typewriter")),
         "3": ("speed", f"{cfg['anim_speed']}x"),
         "4": ("theme", cfg["theme"]),
-        "5": ("custom palette", cfg["theme"] == "custom" and "active" or "inactive"),
+        "5": ("custom palette", "active" if cfg["theme"] == "custom" else "inactive"),
         "6": ("font", cfg.get("font", "default")),
         "7": ("border", cfg.get("border", "double")),
         "8": ("glyphs", cfg.get("glyphs", "unicode")),
@@ -1882,32 +1884,44 @@ def cmd_settings(cfg):
         "e": ("accent", cfg.get("accent") or "auto"),
         "f": ("http timeout", f"{cfg['timeout']}s"),
         "r": ("save reports", "on" if cfg["save_reports"] else "off"),
-        "s": ("preview everything", ""),
-        "k": ("api keys / relay", ""),
-        "u": ("check updates", str(UPDATE_REPO)),
-        "z": ("reset defaults", ""),
-        "0": ("back", ""),
     }
+
+
+SETTINGS_SECTIONS = (
+    ("appearance", ("1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "c", "d", "e")),
+    ("runtime", ("f", "r")),
+    ("tools + maintenance", (
+        ("s", "preview everything"),
+        ("k", "api keys / relay"),
+        ("u", f"check updates  ({UPDATE_REPO})"),
+        ("z", "reset defaults"),
+        ("0", "back"),
+    )),
+)
+
+
+def cmd_settings(nf):
+    # dispatched as fn(module); also callable directly with a settings dict
+    cfg = getattr(nf, "CFG", nf) if not isinstance(nf, dict) else nf
     while True:
         clear()
         show_header("customization")
-        section("appearance")
-        for key in ("1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "c", "d", "e"):
-            name, value = labels[key]
-            kv(f"{key}  {name}", value)
-        section("runtime")
-        for key in ("f", "r"):
-            name, value = labels[key]
-            kv(f"{key}  {name}", value)
-        section("tools + maintenance")
-        for key in ("s", "k", "u", "z", "0"):
-            name, value = labels[key]
-            kv(f"{key}  {name}", value)
-        choice = ask("option").lower()
+        labels = settings_labels(cfg)
+        for title, keys in SETTINGS_SECTIONS:
+            section(title)
+            for key in keys:
+                if isinstance(key, tuple):
+                    letter, name = key
+                    kv(f"{letter}  {name}", "")
+                else:
+                    name, value = labels[key]
+                    kv(f"{key}  {name}", value)
+        choice = ask("option (b = back)").lower()
         if choice in ("", "0"):
             save_settings(cfg)
             apply_live(cfg)
             return
+        changed = True
         if choice == "1":
             cfg["animations"] = not cfg["animations"]
         elif choice == "2":
@@ -1943,7 +1957,7 @@ def cmd_settings(cfg):
             elif is_hex(val):
                 cfg["accent"] = val.lower()
             else:
-                note("invalid hex — accent cleared")
+                note("invalid hex - accent cleared")
                 cfg["accent"] = ""
         elif choice == "f":
             val = ask("timeout seconds (2 - 60)", str(cfg["timeout"]))
@@ -1965,9 +1979,15 @@ def cmd_settings(cfg):
                 for k, v in DEFAULT_SETTINGS.items():
                     cfg[k] = dict(v) if isinstance(v, dict) else v
                 apply_live(cfg)
+            else:
+                changed = False
+        else:
+            note(f"no option '{choice}'")
+            changed = False
         apply_live(cfg)
-        save_settings(cfg)
-        loading("saved")
+        if changed:
+            save_settings(cfg)
+            loading("saved")
 
 
 def preview_everything(cfg):
@@ -2002,11 +2022,12 @@ def preview_everything(cfg):
     note("preview complete")
 
 
-def cmd_setup(cfg):
+def cmd_setup(nf):
     """First-run wizard: walks a new install through the key options."""
+    cfg = getattr(nf, "CFG", nf) if not isinstance(nf, dict) else nf
     clear()
     print()
-    print("  " + P.grad("  w e l c o m e   t o   n x t f 0 u n d  "))
+    print("  " + P.grad("  welcome to f o u n d a t i o n  "))
     print()
     print("  " + P.dim("first run — a few quick choices, changeable later in settings (9)"))
     pause("start setup")
