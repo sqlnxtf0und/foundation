@@ -7,16 +7,14 @@ venv/
 *.zip
 
 # runtime output
-reports/*
-builds/*
-loot/*
-dox/*
-!reports/.gitkeep
-!builds/.gitkeep
-!loot/.gitkeep
-!dox/.gitkeep
+work/reports/*
+work/builds/*
+work/loot/
+work/dox/
+!work/reports/.gitkeep
+!work/builds/.gitkeep
 
-# local settings
+# local settings — never pushed
 settings.json
 pack.json
 backups/
@@ -33,7 +31,3 @@ dist/
 relay-keys.env
 relay-users.json
 *.relay.tokens
-
-# work/ is the permanent sync folder — always tracked, never ignored
-!work/
-!work/**
