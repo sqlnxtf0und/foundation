@@ -10,6 +10,8 @@ import socket
 import subprocess
 import time
 
+DOX_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dox")
+
 PHONE_RE = re.compile(r"\+?\d[\d\s().-]{6,}\d")
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 URL_RE = re.compile(r"https?://[^\s<>\"']+")
@@ -266,7 +268,7 @@ def collect_email(nf, email):
             except Exception:
                 pass
     rep = nf.http(f"https://emailrep.io/{email}", nf.CFG,
-                  extra_headers={"User-Agent": "foundation-osint"})
+                  extra_headers={"User-Agent": "nxtf0und-osint"})
     if not rep.error and rep.status == 200:
         try:
             data["emailrep"] = json.loads(rep.text)
@@ -418,4 +420,107 @@ def _username_hits_quiet(nf, user):
                 hits.append(res)
     return sorted(hits)
 
+def cmd_dox_create(nf):
+    nf.section("dox create")
+    alias = nf.ask("alias / username")
+    email = nf.ask("email")
+    phone = nf.ask("phone")
+    ip = nf.ask("ip / hostname")
+    name = nf.ask("real name (optional)")
+    if not any((alias, email, phone, ip, name)):
+        return
+    profile = {
+        "created": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "alias": alias, "name": name, "email": email, "phone": phone, "ip": ip,
+        "usernames": [], "email_data": {}, "phone_data": {}, "ip_data": {},
+        "accounts": [],
+    }
+    if alias:
+        nf.loading("sweeping usernames")
+        for uname in {alias, alias.replace(" ", ""), alias.lower()}:
+            profile["usernames"].append(uname)
+            profile["accounts"] += [{"site": s, "url": u, "username": uname}
+                                    for s, u in _username_hits_quiet(nf, uname)]
+    if email:
+        profile["email_data"] = collect_email(nf, email)
+    if phone:
+        profile["phone_data"] = phone_profile(phone)
+    if ip:
+        host = ip
+        try:
+            host = socket.gethostbyname(ip)
+        except Exception:
+            pass
+        r = nf.http(f"http://ip-api.com/json/{host}?fields=status,country,regionName,city,isp,org,as,proxy,hosting,query", nf.CFG)
+        if not r.error:
+            try:
+                profile["ip_data"] = json.loads(r.text)
+            except Exception:
+                pass
+    DOX_DIR = nf.writable_dir("dox")
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "_", (alias or email or ip or name))[:40]
+    path = os.path.join(DOX_DIR, f"{slug or 'target'}.json")
+    if nf.ask("save dox profile? (y/n)", "n").lower().startswith("y"):
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(profile, fh, indent=2)
+        nf.kv("saved", path)
+    else:
+        nf.note("dox profile not saved")
+    nf.section("dox summary")
+    nf.kv("accounts", len(profile["accounts"]))
+    for acc in profile["accounts"][:20]:
+        nf.finding("LOW", acc["site"], acc["url"])
 
+def cmd_dox_tracker(nf):
+    nf.section("dox tracker")
+    DOX_DIR = nf.writable_dir("dox")
+    files = sorted(f for f in os.listdir(DOX_DIR) if f.endswith(".json"))
+    if not files:
+        nf.finding("INFO", "no saved dox profiles")
+        return
+    for i, f in enumerate(files, 1):
+        nf.kv(str(i), f)
+    pick = nf.ask("profile number", "1")
+    try:
+        path = os.path.join(DOX_DIR, files[int(pick) - 1])
+    except Exception:
+        nf.finding("MED", "invalid selection")
+        return
+    with open(path, "r", encoding="utf-8") as fh:
+        profile = json.load(fh)
+    old = {(a["site"], a["username"]) for a in profile.get("accounts", [])}
+    usernames = profile.get("usernames") or ([profile["alias"]] if profile.get("alias") else [])
+    if not usernames:
+        nf.finding("INFO", "profile has no username to track")
+        return
+    nf.loading("re-sweeping footprint")
+    new = set()
+    for uname in usernames:
+        for site, _url in _username_hits_quiet(nf, uname):
+            new.add((site, uname))
+    added = sorted(new - old)
+    lost = sorted(old - new)
+    nf.section("diff")
+    if not added and not lost:
+        nf.finding("OK", "no changes since last run")
+    for site, uname in added:
+        nf.finding("OK", f"new account: {site}", uname)
+    for site, uname in lost:
+        nf.finding("MED", f"lost/removed: {site}", uname)
+    for uname in usernames:
+        for site in [s for s, u in added if u == uname]:
+            profile["accounts"].append({"site": site, "username": uname, "url": ""})
+    profile["accounts"] = [a for a in profile["accounts"]
+                           if (a["site"], a["username"]) not in set(lost)]
+    profile["checked"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    if nf.ask("update saved dox profile? (y/n)", "n").lower().startswith("y"):
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(profile, fh, indent=2)
+        nf.finding("OK", "profile updated", path)
+    else:
+        nf.note("profile left unchanged")
+
+MENU = {"osint": [
+    ("Dox Create", cmd_dox_create),
+    ("Dox Tracker", cmd_dox_tracker),
+]}

