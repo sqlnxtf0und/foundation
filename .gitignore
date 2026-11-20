@@ -1,7 +1,7 @@
 # private — never pushed
-/.env
-/settings.json
-/pack.json
+.env
+settings.json
+pack.json
 relay-keys.env
 relay-users.json
 *.relay.tokens
@@ -13,3 +13,18 @@ builds/venv/
 __pycache__/
 *.pyo
 reports/.cache/
+
+# runtime output and generated site clones — never pushed
+builds/*
+!builds/.gitkeep
+reports/*
+!reports/.gitkeep
+loot/
+dox/
+backups/
+
+# distributable archives — built locally, not source
+*.zip
+
+# paid extension pack module — the free project ships without it
+tools_builder.py
