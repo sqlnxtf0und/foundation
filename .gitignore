@@ -1,35 +1,15 @@
-__pycache__/
-*.pyo
-.venv/
-venv/
+# private — never pushed
 .env
-
-*.zip
-
-# runtime output
-reports/*
-builds/*
-loot/*
-dox/*
-!reports/.gitkeep
-!builds/.gitkeep
-!loot/.gitkeep
-!dox/.gitkeep
-
-# local settings
 settings.json
 pack.json
-backups/
-
-# paid extension pack modules — free versions of these files are tracked,
-# so this only blocks the *untracked* paid-only module. Reinstalling the
-# pack materialises it in the tree; this keeps it out of git.
-tools_builder.py
-
-# compiled copy — rebuild with build_protected.py
-dist/
-
-# relay secrets — never commit
 relay-keys.env
 relay-users.json
 *.relay.tokens
+
+# local environments and caches — machine-specific, never pushed
+.venv/
+venv/
+builds/venv/
+__pycache__/
+*.pyo
+reports/.cache/
