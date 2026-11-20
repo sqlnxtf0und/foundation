@@ -28,3 +28,4 @@ backups/
 
 # paid extension pack module — the free project ships without it
 tools_builder.py
+packs/
