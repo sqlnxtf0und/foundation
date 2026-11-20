@@ -1,7 +1,7 @@
 # private — never pushed
-.env
-settings.json
-pack.json
+/.env
+/settings.json
+/pack.json
 relay-keys.env
 relay-users.json
 *.relay.tokens
