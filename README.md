@@ -18,7 +18,7 @@ Full walkthrough: [INSTALL.md](INSTALL.md)
 
 ```bash
 git clone https://github.com/sqlnxtf0und/foundation.git
-cd foundation/work
+cd foundation
 python3 -m pip install -r requirements.txt
 python3 main.py
 ```
@@ -160,26 +160,23 @@ default instead of breaking the interface.
 
 ## Layout
 
-All project files live in `work/`. Run everything from inside that folder.
-
 ```
-work/main.py             entry point, menus, theme, HTTP client, reports
-work/tools_osint.py      OSINT lookups
-work/tools_scan.py       network and web scanners
-work/tools_extra.py      headers, TLS, banners, robots, WAF, wayback
-work/tools_hunt.py       vulnerability research suite
-work/tools_utils.py      hashing, encoding, mirroring, local records
-work/tools_discord.py    Discord lookups
-work/tools_roblox.py     Roblox API lookups
-work/tools_advanced.py   reputation, CVE and research integration
-work/tools_system.py     system and anonymity utilities
-work/install_pack.py     upgrade pack installer
+main.py             entry point, menus, theme, HTTP client, reports
+tools_osint.py      OSINT lookups
+tools_scan.py       network and web scanners
+tools_extra.py      headers, TLS, banners, robots, WAF, wayback
+tools_hunt.py       vulnerability research suite
+tools_utils.py      hashing, encoding, mirroring, local records
+tools_discord.py    Discord lookups
+tools_roblox.py     Roblox API lookups
+tools_advanced.py   reputation, CVE and research integration
+tools_system.py     system and anonymity utilities
+install_pack.py     upgrade pack installer
 ```
 
 Private files stay in the repository root and are git-ignored: `.env`
 (API keys), `settings.json` (your configuration), `pack.json` (installed pack
-manifest). Symlinks inside `work/` point at them so the tool finds them while
-they never leave your machine.
+manifest). They never leave your machine.
 
 ## Updates
 

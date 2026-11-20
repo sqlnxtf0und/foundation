@@ -35,7 +35,7 @@ Download the repository ZIP and extract it, or clone it:
 
 ```powershell
 git clone https://github.com/sqlnxtf0und/foundation.git
-cd foundation/work
+cd foundation
 ```
 
 The current directory must contain `main.py`.
@@ -98,7 +98,7 @@ sudo pacman -S --needed python python-pip git
 
 ```bash
 git clone https://github.com/sqlnxtf0und/foundation.git
-cd foundation/work
+cd foundation
 ```
 
 ### 3. Install the dependencies
@@ -145,7 +145,7 @@ Inside the environment `python main.py` also works. `deactivate` leaves it.
 ```bash
 brew install python git
 git clone https://github.com/sqlnxtf0und/foundation.git
-cd foundation/work
+cd foundation
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python3 main.py

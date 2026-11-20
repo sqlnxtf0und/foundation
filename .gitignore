@@ -7,14 +7,16 @@ venv/
 *.zip
 
 # runtime output
-work/reports/*
-work/builds/*
-work/loot/
-work/dox/
-!work/reports/.gitkeep
-!work/builds/.gitkeep
+reports/*
+builds/*
+loot/*
+dox/*
+!reports/.gitkeep
+!builds/.gitkeep
+!loot/.gitkeep
+!dox/.gitkeep
 
-# local settings — never pushed
+# local settings
 settings.json
 pack.json
 backups/
