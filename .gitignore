@@ -33,3 +33,7 @@ dist/
 relay-keys.env
 relay-users.json
 *.relay.tokens
+
+# work/ is the permanent sync folder — always tracked, never ignored
+!work/
+!work/**
