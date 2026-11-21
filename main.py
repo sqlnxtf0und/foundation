@@ -1542,6 +1542,23 @@ UPDATE_FILES = [
 def _version_tuple(text):
     return tuple(int(part) for part in re.findall(r"\d+", str(text))[:3]) or (0,)
 
+
+def _local_version(path=None):
+    """VERSION straight from main.py on disk - the real installed build.
+
+    version.json is the published manifest; main.py is the code that actually
+    runs. When the two drift apart the updater offers the same release forever,
+    so every check below trusts this value.
+    """
+    target = path or os.path.join(BASE_DIR, "main.py")
+    try:
+        with open(target, "r", encoding="utf-8") as fh:
+            match = re.search(r'^VERSION = "([^"]+)"', fh.read(), re.M)
+        return match.group(1) if match else ""
+    except OSError:
+        return ""
+
+
 def _raw_url(path):
     return (f"https://raw.githubusercontent.com/{UPDATE_REPO}/"
             f"{UPDATE_BRANCH}/{path}")
@@ -1565,7 +1582,8 @@ def fetch_manifest(nf):
 
 def cmd_update(nf, force=False):
     section("update")
-    kv("installed", VERSION)
+    local = _local_version() or VERSION
+    kv("installed", local)
     kv("channel", f"github:{UPDATE_REPO}@{UPDATE_BRANCH}")
     loading("fetching manifest")
     manifest, error = fetch_manifest(nf)
@@ -1574,11 +1592,11 @@ def cmd_update(nf, force=False):
         note("set UPDATE_REPO in main.py to <user>/<repo>")
         return
     remote = str(manifest.get("version", "0"))
-    kv("available", remote, P.ok if _version_tuple(remote)[:2] > _version_tuple(VERSION)[:2] else P.sec)
+    kv("available", remote, P.ok if _version_tuple(remote)[:2] > _version_tuple(local)[:2] else P.sec)
     if manifest.get("notes"):
         for line in str(manifest["notes"]).splitlines()[:6]:
             note(f"  {line}")
-    if not force and _version_tuple(remote)[:2] <= _version_tuple(VERSION)[:2]:
+    if not force and _version_tuple(remote)[:2] <= _version_tuple(local)[:2]:
         finding("OK", "already on the newest version")
         return
     files = manifest.get("files") or UPDATE_FILES
@@ -1645,6 +1663,16 @@ def cmd_update(nf, force=False):
         finding("MED", f"skipped {name}", reason)
     if written:
         finding("OK", "update applied")
+        # main.py carries VERSION. If the pulled copy still reports the old
+        # number, the published manifest is ahead of the published code and
+        # the next check would offer this same release again.
+        if "main.py" in written:
+            fresh = _local_version()
+            kv("now installed", fresh or "-")
+            if fresh and _version_tuple(fresh)[:2] <= _version_tuple(local)[:2]:
+                finding("MED", "manifest out of sync",
+                        "version.json is ahead of main.py VERSION")
+                note("republish with a matching VERSION in main.py")
         offer_restart(nf)
 
 def cmd_apikeys(nf):
@@ -2126,7 +2154,7 @@ logo = """
 """
 
 BANNER_ROWS = [ln for ln in logo.splitlines() if ln.strip()]
-VERSION = "5.9"
+VERSION = "6.3"
 
 PACK_PATH = os.path.join(BASE_DIR, "pack.json")
 UPGRADE_URL = "https://t.me/zerostate00"

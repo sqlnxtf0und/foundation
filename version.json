@@ -1,8 +1,8 @@
 {
-  "version": "6.2",
+  "version": "6.3",
   "released": "2026-11-21",
   "repo": "sqlnxtf0und/foundation",
-  "notes": "breach check: free comb index (no key), id -> email chain, hibp/emailrep optional, reputation block",
+  "notes": "fix update loop: updater reads VERSION from main.py on disk, flags a manifest that is ahead of the code, VERSION now matches manifest",
   "files": [
     "main.py",
     "apikeys.py",

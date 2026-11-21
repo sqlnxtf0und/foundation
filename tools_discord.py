@@ -585,100 +585,58 @@ def cmd_snowflake(nf):
     nf.save_report(f"discord_user_{raw}", body)
 
 
-def _comb(nf, query, limit=20):
-    """COMB index: free, no key, keyed on emails and usernames."""
-    url = "https://api.proxynova.com/comb?query=" + urllib.parse.quote(query)
-    r = nf.http(url, nf.CFG, body_limit=400_000,
-                timeout=min(14, nf.CFG["timeout"]))
-    if r.error or r.status != 200:
-        return None
-    try:
-        data = json.loads(r.text)
-    except Exception:
-        return None
-    lines = data.get("lines") or []
-    return {"count": int(data.get("count") or 0), "lines": lines[:limit]}
-
-
-def _breach_sweep(nf, query):
-    """Every configured index for one identifier. Returns a hit count."""
-    hits = 0
-    nf.loading("querying breach indexes")
-
-    comb = _comb(nf, query)
-    nf.section("comb index")
-    if comb is None:
-        nf.finding("INFO", "comb index unreachable")
-    elif comb["count"] == 0:
-        nf.finding("OK", "no comb records")
-    else:
-        nf.finding("HIGH", f"{comb['count']:,} comb records",
-                   "email:password pairs")
-        for line in comb["lines"]:
-            nf.kv("record", line[:120])
-        hits += comb["count"]
-
-    try:
-        import apikeys
-        breaches = apikeys.hibp_account(nf, query) if "@" in query else None
-        rep = apikeys.emailrep(nf, query) if "@" in query else None
-    except Exception:
-        breaches, rep = None, None
-
-    if breaches:
-        nf.section("known breaches")
-        for item in breaches[:15]:
-            nf.finding("HIGH", item.get("Name", "?"),
-                       str(item.get("BreachDate", "")))
-            nf.kv("  records", item.get("PwnCount", "?"))
-            nf.kv("  exposed",
-                  ", ".join((item.get("DataClasses") or [])[:6]))
-        hits += len(breaches)
-    elif breaches == []:
-        nf.finding("OK", "no hibp records")
-
-    if rep:
-        nf.section("reputation")
-        nf.kv("suspicious", str(rep.get("suspicious", False)))
-        nf.kv("references", rep.get("references", "?"))
-        nf.kv("blacklisted",
-              str(rep.get("details", {}).get("blacklisted", False)))
-        nf.kv("profiles",
-              ", ".join(rep.get("details", {}).get("profiles") or []) or "-")
-        nf.kv("last seen", rep.get("details", {}).get("last_seen", "-"))
-        hits += 1
-
-    if breaches is None and rep is None:
-        nf.note("add HIBP_API_KEY / EMAILREP_API_KEY for deeper indexes")
-    return hits
-
-
 def cmd_id_breach(nf):
-    """A snowflake identifies an account, not a secret - chain it to the real key."""
+    """Cross-reference the identifier against breach and reputation sources."""
     nf.section("id breach check")
     target = nf.ask("email, username, or discord id").strip()
     if not target:
         return
+    findings = 0
 
     if target.isdigit() and len(target) >= 17:
         parts = snowflake_parts(target)
         nf.kv("snowflake", target)
         nf.kv("created", parts["created"])
-        nf.kv("age (days)", parts["age_days"],
-              nf.P.ok if parts["age_days"] > 365 else nf.P.warn)
-        nf.note("a snowflake holds only a timestamp - no email, no secret")
-        nf.note("breach corpora index emails and usernames, so the id")
-        nf.note("must be paired with the address behind the account")
-        follow = nf.ask("email or username to cross-check (blank = skip)")
-        if not follow.strip():
-            nf.save_report(f"breach_{target}", {"target": target})
-            return
-        target = follow.strip()
+        nf.kv("age (days)", parts["age_days"], nf.P.ok if parts["age_days"] > 365 else nf.P.warn)
+        findings += 1
 
-    hits = _breach_sweep(nf, target)
-    if not hits:
-        nf.finding("INFO", "nothing indexed for that identifier")
-    nf.save_report(f"breach_{target}", {"target": target, "hits": hits})
+    if "@" in target:
+        nf.loading("querying breach indexes")
+        try:
+            import apikeys
+            breaches = apikeys.hibp_account(nf, target)
+            if breaches:
+                nf.section("known breaches")
+                for item in breaches:
+                    nf.finding("HIGH", item.get("Name", "?"),
+                               str(item.get("BreachDate", "")))
+                    nf.kv("  records", item.get("PwnCount", "?"))
+                    data = item.get("DataClasses") or []
+                    nf.kv("  exposed", ", ".join(data[:6]))
+                findings += len(breaches)
+            elif breaches == []:
+                nf.finding("OK", "no breach records")
+            else:
+                nf.finding("INFO", "hibp not configured",
+                           "add HIBP_API_KEY in settings -> api keys")
+
+            rep = apikeys.emailrep(nf, target)
+            if rep:
+                nf.section("reputation")
+                nf.kv("suspicious", str(rep.get("suspicious", False)))
+                nf.kv("references", rep.get("references", "?"))
+                nf.kv("blacklisted", str(rep.get("details", {}).get("blacklisted", False)))
+                nf.kv("profiles", ", ".join(rep.get("details", {}).get("profiles") or []) or "-")
+                nf.kv("last seen", rep.get("details", {}).get("last_seen", "-"))
+                findings += 1
+        except Exception as exc:
+            nf.finding("MED", "breach lookup failed", str(exc)[:120])
+
+    if not findings:
+        nf.finding("INFO", "nothing resolved",
+                   "use a discord id or an email address")
+
+    nf.save_report(f"breach_{target}", {"target": target})
 
 
 def cmd_user_intel(nf):
