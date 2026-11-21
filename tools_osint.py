@@ -9,6 +9,7 @@ import shutil
 import socket
 import subprocess
 import time
+import urllib.parse
 
 DOX_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dox")
 
@@ -519,6 +520,395 @@ def cmd_dox_tracker(nf):
         nf.finding("OK", "profile updated", path)
     else:
         nf.note("profile left unchanged")
+
+def _doh(nf, name, rtype="A"):
+    """Resolve through Google DoH so no resolver library is required."""
+    url = f"https://dns.google/resolve?name={name}&type={rtype}"
+    r = nf.http(url, nf.CFG, body_limit=120_000, timeout=min(10, nf.CFG["timeout"]))
+    if r.error or r.status != 200:
+        return []
+    try:
+        data = json.loads(r.text)
+    except Exception:
+        return []
+    if int(data.get("Status", 0)) != 0:
+        return []
+    return [ans.get("data", "") for ans in (data.get("Answer") or [])]
+
+
+def _rdap(nf, path):
+    r = nf.http(f"https://rdap.org/{path}", nf.CFG, body_limit=400_000,
+                timeout=min(12, nf.CFG["timeout"]))
+    if r.error or r.status != 200:
+        return None
+    try:
+        return json.loads(r.text)
+    except Exception:
+        return None
+
+
+def _gravatar_exists(nf, email):
+    digest = hashlib.md5(email.strip().lower().encode()).hexdigest()
+    r = nf.http(f"https://www.gravatar.com/avatar/{digest}?d=404", nf.CFG,
+                body_limit=2000, timeout=min(8, nf.CFG["timeout"]))
+    return not r.error and r.status == 200
+
+
+def cmd_email_intel(nf):
+    nf.section("email intel")
+    email = nf.ask("email address").strip()
+    if not email or "@" not in email:
+        nf.finding("MED", "valid email required")
+        return
+    local, _, domain = email.partition("@")
+    domain = domain.lower()
+    nf.loading("resolving mail infrastructure")
+
+    nf.kv("address", email)
+    nf.kv("local part", local)
+    nf.kv("domain", domain)
+    nf.kv("disposable", "yes" if domain in DISPOSABLE else "no",
+          nf.P.bad if domain in DISPOSABLE else nf.P.ok)
+    nf.kv("gravatar", "registered" if _gravatar_exists(nf, email) else "none")
+
+    mx = _doh(nf, domain, "MX")
+    nf.section("mail exchangers")
+    for record in mx[:6]:
+        nf.kv("mx", record)
+    if not mx:
+        nf.finding("MED", "no MX record", "domain may not receive mail")
+
+    txt = _doh(nf, domain, "TXT")
+    spf = [t for t in txt if "v=spf1" in t.lower()]
+    dmarc = _doh(nf, f"_dmarc.{domain}", "TXT")
+    dkim = _doh(nf, f"default._domainkey.{domain}", "TXT")
+    nf.section("policy records")
+    nf.kv("spf", spf[0][:110] if spf else "missing",
+          nf.P.ok if spf else nf.P.warn)
+    nf.kv("dmarc", dmarc[0][:110] if dmarc else "missing",
+          nf.P.ok if dmarc else nf.P.warn)
+    nf.kv("dkim (default)", "present" if dkim else "not published",
+          nf.P.ok if dkim else nf.P.warn)
+
+    a = _doh(nf, domain, "A")
+    if a:
+        nf.section("host")
+        for ip in a[:4]:
+            nf.kv("a record", ip)
+
+    try:
+        import apikeys
+        breaches = apikeys.hibp_account(nf, email)
+        rep = apikeys.emailrep(nf, email)
+    except Exception:
+        breaches, rep = None, None
+    if breaches:
+        nf.section("breaches")
+        for item in breaches[:12]:
+            nf.finding("HIGH", item.get("Name", "?"), str(item.get("BreachDate", "")))
+    if rep:
+        nf.section("reputation")
+        nf.kv("suspicious", str(rep.get("suspicious", False)))
+        nf.kv("references", rep.get("references", "?"))
+        nf.kv("profiles", ", ".join(rep.get("details", {}).get("profiles") or []) or "-")
+    if breaches is None and rep is None:
+        nf.note("add HIBP / emailrep keys in settings for breach data")
+
+    nf.save_report(f"email_intel_{domain}", {
+        "email": email, "mx": mx, "spf": spf, "dmarc": dmarc,
+        "disposable": domain in DISPOSABLE,
+    })
+
+
+def cmd_domain_intel(nf):
+    nf.section("domain intel")
+    domain = nf.ask("domain (no scheme)").strip().lower()
+    domain = re.sub(r"^https?://", "", domain).split("/")[0]
+    if not domain:
+        return
+    nf.loading("resolving domain")
+
+    for rtype in ("A", "AAAA", "NS", "MX", "TXT"):
+        answers = _doh(nf, domain, rtype)
+        if answers:
+            nf.section(rtype)
+            for record in answers[:8]:
+                nf.kv(rtype.lower(), record[:120])
+
+    txt = _doh(nf, domain, "TXT")
+    nf.section("mail policy")
+    spf = next((t for t in txt if "v=spf1" in t.lower()), "")
+    dmarc = _doh(nf, f"_dmarc.{domain}", "TXT")
+    nf.kv("spf", spf[:110] if spf else "missing", nf.P.ok if spf else nf.P.warn)
+    nf.kv("dmarc", dmarc[0][:110] if dmarc else "missing",
+          nf.P.ok if dmarc else nf.P.warn)
+
+    data = _rdap(nf, f"domain/{domain}")
+    if data:
+        nf.section("registration")
+        for event in data.get("events", [])[:4]:
+            nf.kv(event.get("eventAction", "?"), str(event.get("eventDate", ""))[:19])
+        for entity in data.get("entities", [])[:4]:
+            roles = ", ".join(entity.get("roles") or [])
+            vcard = entity.get("vcardArray", [None, []])[1] if entity.get("vcardArray") else []
+            name = next((f[3] for f in vcard if f[0] == "fn"), "")
+            nf.kv(roles or "entity", name or entity.get("handle", "-"))
+        nf.kv("status", ", ".join(data.get("status") or []) or "-")
+        nf.kv("nameservers", ", ".join(
+            ns.get("ldhName", "") for ns in data.get("nameservers", [])[:4]) or "-")
+    else:
+        nf.note("rdap lookup unavailable for this tld")
+
+    nf.save_report(f"domain_intel_{domain}", {"domain": domain, "rdap": data})
+
+
+def cmd_ip_intel(nf):
+    nf.section("ip intel")
+    raw = nf.ask("ip address").strip()
+    try:
+        socket.inet_aton(raw)
+    except OSError:
+        nf.finding("MED", "valid ipv4 address required")
+        return
+    nf.loading("querying registries")
+
+    try:
+        host = socket.gethostbyaddr(raw)[0]
+        nf.kv("reverse dns", host)
+    except Exception:
+        nf.kv("reverse dns", "none")
+
+    data = _rdap(nf, f"ip/{raw}")
+    if data:
+        nf.section("allocation")
+        nf.kv("handle", data.get("handle", "-"))
+        nf.kv("name", data.get("name", "-"))
+        nf.kv("country", data.get("country", "-"))
+        nf.kv("type", data.get("type", "-"))
+        for event in data.get("events", [])[:3]:
+            nf.kv(event.get("eventAction", "?"), str(event.get("eventDate", ""))[:19])
+        for entity in data.get("entities", [])[:3]:
+            vcard = entity.get("vcardArray", [None, []])[1] if entity.get("vcardArray") else []
+            name = next((f[3] for f in vcard if f[0] == "fn"), "")
+            nf.kv(", ".join(entity.get("roles") or []) or "entity", name or "-")
+
+    try:
+        import apikeys
+        geo = apikeys.ipinfo(nf, raw)
+    except Exception:
+        geo = None
+    if geo:
+        nf.section("geolocation")
+        nf.kv("city / region", f"{geo.get('city', '-')} / {geo.get('region', '-')}")
+        nf.kv("country", geo.get("country", "-"))
+        nf.kv("org", geo.get("org", "-"))
+        nf.kv("asn", geo.get("asn", "-"))
+    else:
+        r = nf.http(f"https://ipwho.is/{raw}", nf.CFG, body_limit=60_000,
+                    timeout=min(10, nf.CFG["timeout"]))
+        if not r.error and r.status == 200:
+            try:
+                geo = json.loads(r.text)
+                nf.section("geolocation (free)")
+                nf.kv("city / region",
+                      f"{geo.get('city', '-')} / {geo.get('region', '-')}")
+                nf.kv("country", geo.get("country", "-"))
+                nf.kv("org", (geo.get("connection") or {}).get("org", "-"))
+                nf.kv("asn", (geo.get("connection") or {}).get("asn", "-"))
+            except Exception:
+                pass
+
+    nf.save_report(f"ip_intel_{raw}", data or {})
+
+
+def cmd_wallet_lookup(nf):
+    nf.section("wallet lookup")
+    address = nf.ask("btc or eth address").strip()
+    if not address:
+        return
+    if address.lower().startswith("0x") and len(address) == 42:
+        r = nf.http(f"https://api.blockcypher.com/v1/eth/main/addrs/{address}/balance",
+                    nf.CFG, body_limit=80_000, timeout=min(12, nf.CFG["timeout"]))
+        if r.error or r.status != 200:
+            nf.finding("MED", "balance lookup failed", r.error or str(r.status))
+            return
+        try:
+            data = json.loads(r.text)
+        except Exception:
+            nf.finding("MED", "malformed response")
+            return
+        nf.kv("chain", "ethereum")
+        nf.kv("address", address)
+        nf.kv("balance", f"{int(data.get('balance', 0)) / 1e18:.6f} ETH")
+        nf.kv("received", f"{int(data.get('total_received', 0)) / 1e18:.6f} ETH")
+        nf.kv("tx count", data.get("n_tx", "-"))
+        nf.save_report(f"wallet_eth_{address[:10]}", data)
+        return
+
+    r = nf.http(f"https://blockchain.info/rawaddr/{address}?limit=0", nf.CFG,
+                body_limit=200_000, timeout=min(12, nf.CFG["timeout"]))
+    if r.error or r.status != 200:
+        nf.finding("MED", "balance lookup failed", r.error or str(r.status))
+        return
+    try:
+        data = json.loads(r.text)
+    except Exception:
+        nf.finding("MED", "malformed response")
+        return
+    nf.kv("chain", "bitcoin")
+    nf.kv("address", address)
+    nf.kv("balance", f"{int(data.get('final_balance', 0)) / 1e8:.8f} BTC")
+    nf.kv("received", f"{int(data.get('total_received', 0)) / 1e8:.8f} BTC")
+    nf.kv("sent", f"{int(data.get('total_sent', 0)) / 1e8:.8f} BTC")
+    nf.kv("tx count", data.get("n_tx", "-"))
+    nf.save_report(f"wallet_btc_{address[:10]}", data)
+
+
+def cmd_paste_hunt(nf):
+    nf.section("paste hunt")
+    query = nf.ask("term (email, username, domain)").strip()
+    if not query:
+        return
+    nf.loading("searching paste indexes")
+    r = nf.http(f"https://psbdmp.ws/api/v3/search/{urllib.parse.quote(query)}",
+                nf.CFG, body_limit=300_000, timeout=min(14, nf.CFG["timeout"]))
+    if r.error or r.status != 200:
+        nf.finding("MED", "index unavailable", r.error or str(r.status))
+        nf.note("try https://pastebin.com/search?q=" + query)
+        return
+    try:
+        data = json.loads(r.text)
+    except Exception:
+        nf.finding("MED", "malformed index response")
+        return
+    items = data.get("data") if isinstance(data, dict) else data
+    if not items:
+        nf.finding("OK", "no pastes indexed for that term")
+        return
+    for item in items[:20]:
+        nf.kv(item.get("id", "?")[:12],
+              f"{item.get('time', '?')}  dumps.pastebin.ca/{item.get('id', '')}")
+    nf.save_report(f"paste_{query[:20]}", items)
+
+
+def cmd_social_sweep(nf):
+    nf.section("social sweep")
+    username = nf.ask("username").strip().lstrip("@")
+    if not username:
+        return
+    nf.loading("sweeping platforms")
+    hits = _username_hits_quiet(nf, username)
+    nf.section(f"hits ({len(hits)})")
+    for name, url in hits:
+        nf.kv(name, url, nf.P.ok)
+    nf.save_report(f"social_sweep_{username}", hits)
+
+
+def cmd_cve_intel(nf):
+    nf.section("cve intel")
+    raw = nf.ask("cve id (e.g. CVE-2024-3094)").strip().upper()
+    if not re.match(r"^CVE-\d{4}-\d{4,}$", raw):
+        nf.finding("MED", "invalid cve id")
+        return
+    nf.loading("querying nvd")
+    r = nf.http("https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=" + raw,
+                nf.CFG, body_limit=1_500_000, timeout=min(20, nf.CFG["timeout"]))
+    if r.error or r.status != 200:
+        nf.finding("MED", "nvd lookup failed", r.error or str(r.status))
+        return
+    try:
+        data = json.loads(r.text)
+        vuln = (data.get("vulnerabilities") or [{}])[0].get("cve", {})
+    except Exception:
+        nf.finding("MED", "malformed nvd response")
+        return
+    nf.kv("id", vuln.get("id", raw))
+    nf.kv("published", str(vuln.get("published", ""))[:19])
+    nf.kv("status", vuln.get("vulnStatus", "-"))
+    for desc in vuln.get("descriptions", []):
+        if desc.get("lang") == "en":
+            nf.kv("summary", desc.get("value", "")[:220])
+            break
+    metrics = vuln.get("metrics", {})
+    for key in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
+        if key in metrics:
+            m = metrics[key][0]["cvssData"]
+            nf.kv("cvss", f"{m.get('baseScore')} ({m.get('baseSeverity', '?')})",
+                  nf.P.bad if m.get("baseScore", 0) >= 7 else nf.P.warn)
+            break
+    weaknesses = vuln.get("weaknesses") or []
+    cwes = [d.get("value") for w in weaknesses for d in w.get("description", [])
+            if d.get("value", "").startswith("CWE")]
+    if cwes:
+        nf.kv("cwe", ", ".join(sorted(set(cwes))[:6]))
+
+    epss = nf.http(f"https://api.first.org/data/v1/epss?cve={raw}", nf.CFG,
+                   body_limit=40_000, timeout=min(12, nf.CFG["timeout"]))
+    if not epss.error and epss.status == 200:
+        try:
+            rows = json.loads(epss.text).get("data") or []
+            if rows:
+                nf.kv("epss", f"{float(rows[0]['epss']) * 100:.2f}%")
+                nf.kv("percentile", f"{float(rows[0]['percentile']) * 100:.1f}%")
+        except Exception:
+            pass
+
+    nf.save_report(f"cve_{raw}", data)
+
+
+def cmd_tech_stack(nf):
+    nf.section("tech stack")
+    url = nf.ask("url or host").strip()
+    if not url:
+        return
+    url = nf.normalize_url(url)
+    nf.loading("fingerprinting")
+    r = nf.http(url, nf.CFG, body_limit=600_000, timeout=min(12, nf.CFG["timeout"]))
+    if r.error:
+        nf.finding("HIGH", "request failed", r.error)
+        return
+    nf.kv("status", r.status)
+    nf.kv("server", r.hget("server") or "-")
+    nf.kv("powered by", r.hget("x-powered-by") or "-")
+    nf.kv("framework", r.hget("x-framework") or "-")
+    nf.kv("generator", r.hget("x-generator") or "-")
+    cookies = r.hget("set-cookie")
+    if cookies:
+        nf.kv("cookies", cookies[:120])
+
+    body = (r.text or "").lower()
+    markers = {
+        "wordpress": ("wp-content", "wp-includes"),
+        "drupal": ("drupal", "sites/default/files"),
+        "joomla": ("joomla", "/components/com_"),
+        "shopify": ("cdn.shopify.com", "shopify"),
+        "react": ("react-dom", "_next/static", "data-reactroot"),
+        "vue": ("vue.js", "__vue__", "v-cloak"),
+        "angular": ("ng-version", "angular.min.js"),
+        "next.js": ("_next/static", "__next_data__"),
+        "laravel": ("laravel_session", "csrf-token"),
+        "django": ("csrfmiddlewaretoken", "__admin__"),
+        "rails": ("csrf-token", "action_controller"),
+        "cloudflare": ("cf-ray", "__cf_bm"),
+    }
+    found = [name for name, needles in markers.items()
+             if any(needle in body for needle in needles)]
+    headers = {k.lower(): v for k, v in (r.headers or {}).items()}
+    if "cf-ray" in headers and "cloudflare" not in found:
+        found.append("cloudflare")
+    if "x-amz-cf-id" in headers:
+        found.append("cloudfront")
+    if "x-vercel-id" in headers:
+        found.append("vercel")
+    if "x-github-request-id" in headers:
+        found.append("github pages")
+    nf.section("detected")
+    nf.kv("stack", ", ".join(sorted(set(found))) or "no signature matched")
+    nf.save_report(f"tech_{re.sub(r'[^a-z0-9]+', '_', url)[:40]}", {
+        "url": url, "status": r.status, "stack": found,
+        "server": headers.get("server", ""),
+    })
+
 
 MENU = {"osint": [
     ("Dox Create", cmd_dox_create),

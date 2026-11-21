@@ -1,12 +1,11 @@
 {
-  "version": "5.9",
-  "released": "2026-11-19",
+  "version": "6.0",
+  "released": "2026-11-21",
   "repo": "sqlnxtf0und/foundation",
-  "notes": "pack zips accept a nested folder, clock now renders, compact layout, graphic config chooser on every launch, make_zip.py release builder",
+  "notes": "discord lookup suite (id breach, user intel, guild intel, snowflake), osint additions (email/domain/ip intel, social sweep, paste hunt, wallet lookup, tech stack, cve intel with epss), push.sh local-only",
   "files": [
     "main.py",
     "apikeys.py",
-    "relay.py",
     "LICENSE",
     "tools_osint.py",
     "tools_scan.py",
@@ -22,6 +21,10 @@
     "README.md",
     "INSTALL.md",
     "DISCLAIMER.md",
-    "make_zip.py"
+    "relay-keys.example.env",
+    "relay-users.example.json",
+    "settings.example.json",
+    ".env.example",
+    ".gitignore"
   ]
 }

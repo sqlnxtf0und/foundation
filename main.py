@@ -2344,6 +2344,12 @@ OSINT_MENU = _menu(
     ("Shodan InternetDB", tools_extra.cmd_shodan),
     ("Subdomain Enum", tools_extra.cmd_subdomains),
     ("Discord ID Decoder", tools_extra.cmd_discord_id),
+    ("Email Intel", tools_osint.cmd_email_intel),
+    ("Domain Intel", tools_osint.cmd_domain_intel),
+    ("IP Intel", tools_osint.cmd_ip_intel),
+    ("Social Sweep", tools_osint.cmd_social_sweep),
+    ("Paste Hunt", tools_osint.cmd_paste_hunt),
+    ("Wallet Lookup", tools_osint.cmd_wallet_lookup),
     *pack_entries("osint"),
 )
 
@@ -2380,6 +2386,7 @@ WEB_MENU = _menu(
     ("JS Secret Harvest", tools_hunt.cmd_js_secrets),
     ("Sensitive File Sweep", tools_hunt.cmd_sensitive_files),
     ("API Surface Map", tools_hunt.cmd_api_map),
+    ("Tech Stack Fingerprint", tools_osint.cmd_tech_stack),
     *pack_entries("web"),
 )
 
@@ -2456,6 +2463,7 @@ ADVANCED_MENU = _menu(
     ("Reverse IP", tools_advanced.cmd_reverse_ip),
     ("DNSBL / Reputation", tools_advanced.cmd_dnsbl),
     ("CVE Lookup", tools_advanced.cmd_cve),
+    ("CVE Intel (NVD + EPSS)", tools_osint.cmd_cve_intel),
     ("MSF Console / Payloads", lambda nf: cmd_msf(nf.CFG)),
     ("Zero-Day Hunt", lambda nf: run_submenu(nf, "hunt", HUNT_MENU)),
     ("Exploit Lookup", tools_hunt.cmd_exploit_lookup),

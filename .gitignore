@@ -26,6 +26,12 @@ backups/
 # distributable archives — built locally, not source
 *.zip
 
+# local push helper — machine-specific, not part of the project
+push.sh
+
+# agent instructions — local working config, not part of the project
+AGENTS.md
+
 # paid extension pack module — the free project ships without it
 tools_builder.py
 packs/

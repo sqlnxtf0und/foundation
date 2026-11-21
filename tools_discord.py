@@ -524,6 +524,240 @@ def cmd_nitro_generator(nf):
         nf.kv("gift", f"https://discord.gift/{code}")
     nf.note("random codes; discord validates server-side on redemption")
 
+BADGES = {
+    0: "staff", 1: "partner", 2: "hypesquad", 3: "bug_hunter_lvl1",
+    6: "hypesquad_bravery", 7: "hypesquad_brilliance", 8: "hypesquad_balance",
+    9: "early_supporter", 10: "team_pseudo", 12: "verified_bot_dev",
+    14: "early_verified_bot_dev", 16: "verified_bot", 17: "certified_mod",
+    18: "http_interactions_bot", 22: "active_developer",
+}
+
+
+def snowflake_parts(value):
+    """Break a Discord id into its timestamp and machine fields."""
+    sf = int(value)
+    stamp = ((sf >> 22) + 1420070400000) / 1000
+    return {
+        "timestamp": stamp,
+        "created": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(stamp)),
+        "age_days": int((time.time() - stamp) / 86400),
+        "worker": (sf >> 17) & 0x1F,
+        "process": (sf >> 12) & 0x1F,
+        "increment": sf & 0xFFF,
+    }
+
+
+def badge_list(flags):
+    return [label for bit, label in BADGES.items() if flags & (1 << bit)]
+
+
+def cmd_snowflake(nf):
+    nf.section("snowflake decoder")
+    raw = nf.ask("discord id").strip()
+    if not raw.isdigit():
+        nf.finding("MED", "numeric snowflake required")
+        return
+    parts = snowflake_parts(raw)
+    nf.kv("id", raw)
+    nf.kv("created", parts["created"])
+    nf.kv("age (days)", parts["age_days"])
+    nf.kv("worker / process", f"{parts['worker']} / {parts['process']}")
+    nf.kv("increment", parts["increment"])
+    nf.note("worker and process are 0 for user accounts since 2015")
+
+    status, body = _req(nf, "", "GET", f"/users/{raw}")
+    if status != 200 or not isinstance(body, dict):
+        nf.finding("INFO", "profile not resolvable without a token", str(status))
+        return
+    nf.section("profile")
+    nf.kv("username", body.get("username", "-"))
+    nf.kv("display", body.get("global_name") or "-")
+    nf.kv("bot", str(body.get("bot", False)))
+    nf.kv("system", str(body.get("system", False)))
+    flags = int(body.get("public_flags") or body.get("flags") or 0)
+    nf.kv("badges", ", ".join(badge_list(flags)) or "none")
+    if body.get("avatar"):
+        nf.kv("avatar", "https://cdn.discordapp.com/avatars/"
+              f"{raw}/{body['avatar']}.png?size=1024")
+    if body.get("banner"):
+        nf.kv("banner", "https://cdn.discordapp.com/banners/"
+              f"{raw}/{body['banner']}.png?size=1024")
+    nf.save_report(f"discord_user_{raw}", body)
+
+
+def cmd_id_breach(nf):
+    """Cross-reference the identifier against breach and reputation sources."""
+    nf.section("id breach check")
+    target = nf.ask("email, username, or discord id").strip()
+    if not target:
+        return
+    findings = 0
+
+    if target.isdigit() and len(target) >= 17:
+        parts = snowflake_parts(target)
+        nf.kv("snowflake", target)
+        nf.kv("created", parts["created"])
+        nf.kv("age (days)", parts["age_days"], nf.P.ok if parts["age_days"] > 365 else nf.P.warn)
+        findings += 1
+
+    if "@" in target:
+        nf.loading("querying breach indexes")
+        try:
+            import apikeys
+            breaches = apikeys.hibp_account(nf, target)
+            if breaches:
+                nf.section("known breaches")
+                for item in breaches:
+                    nf.finding("HIGH", item.get("Name", "?"),
+                               str(item.get("BreachDate", "")))
+                    nf.kv("  records", item.get("PwnCount", "?"))
+                    data = item.get("DataClasses") or []
+                    nf.kv("  exposed", ", ".join(data[:6]))
+                findings += len(breaches)
+            elif breaches == []:
+                nf.finding("OK", "no breach records")
+            else:
+                nf.finding("INFO", "hibp not configured",
+                           "add HIBP_API_KEY in settings -> api keys")
+
+            rep = apikeys.emailrep(nf, target)
+            if rep:
+                nf.section("reputation")
+                nf.kv("suspicious", str(rep.get("suspicious", False)))
+                nf.kv("references", rep.get("references", "?"))
+                nf.kv("blacklisted", str(rep.get("details", {}).get("blacklisted", False)))
+                nf.kv("profiles", ", ".join(rep.get("details", {}).get("profiles") or []) or "-")
+                nf.kv("last seen", rep.get("details", {}).get("last_seen", "-"))
+                findings += 1
+        except Exception as exc:
+            nf.finding("MED", "breach lookup failed", str(exc)[:120])
+
+    if not findings:
+        nf.finding("INFO", "nothing resolved",
+                   "use a discord id or an email address")
+
+    nf.save_report(f"breach_{target}", {"target": target})
+
+
+def cmd_user_intel(nf):
+    """Aggregate public profile plus account state for a user id."""
+    nf.section("user intel")
+    raw = nf.ask("discord user id").strip()
+    if not raw.isdigit():
+        nf.finding("MED", "numeric id required")
+        return
+    nf.loading("pulling profile")
+    status, body = _req(nf, "", "GET", f"/users/{raw}")
+    if status != 200 or not isinstance(body, dict):
+        _print_status(nf, status, body)
+        return
+    parts = snowflake_parts(raw)
+    nf.kv("username", body.get("username", "-"))
+    nf.kv("display", body.get("global_name") or "-")
+    nf.kv("id", raw)
+    nf.kv("created", parts["created"])
+    nf.kv("account age", f"{parts['age_days']} days")
+    nf.kv("bot", str(body.get("bot", False)))
+    nf.kv("mfa enabled", str(body.get("mfa_enabled", "hidden")))
+    nf.kv("locale", body.get("locale") or "-")
+    nf.kv("premium", str(body.get("premium_type", 0)))
+    flags = int(body.get("public_flags") or 0)
+    nf.kv("badges", ", ".join(badge_list(flags)) or "none")
+    nf.kv("accent color", f"#{body.get('accent_color'):06x}" if body.get("accent_color") else "-")
+    if body.get("avatar"):
+        nf.kv("avatar", "https://cdn.discordapp.com/avatars/"
+              f"{raw}/{body['avatar']}.png?size=1024")
+    nf.note("email, phone, and connected accounts need an authenticated token")
+    nf.save_report(f"user_intel_{raw}", body)
+
+
+def cmd_token_recon(nf):
+    """Everything the token itself can read about its own account."""
+    nf.section("token recon")
+    token = _get_token(nf)
+    if not token:
+        return
+    status, me = _req(nf, token, "GET", "/users/@me")
+    if status != 200 or not isinstance(me, dict):
+        _print_status(nf, status, me)
+        return
+    nf.kv("account", f"{me.get('username')}#{me.get('discriminator', '0')}")
+    nf.kv("id", me.get("id", "-"))
+    nf.kv("email", me.get("email", "-"))
+    nf.kv("verified", str(me.get("verified", "-")))
+    nf.kv("phone", str(me.get("phone", "-")))
+    nf.kv("mfa", str(me.get("mfa_enabled", "-")))
+    nf.kv("nitro", {0: "none", 1: "classic", 2: "boost", 3: "basic"}.get(
+        me.get("premium_type", 0), "?"))
+
+    status, guilds = _req(nf, token, "GET", "/users/@me/guilds")
+    if status == 200 and isinstance(guilds, list):
+        nf.section(f"guilds ({len(guilds)})")
+        for guild in guilds[:40]:
+            owner = " [owner]" if guild.get("owner") else ""
+            nf.kv(guild.get("name", "?")[:28],
+                   f"{guild.get('id')}  perms={guild.get('permissions')}{owner}")
+
+    status, conns = _req(nf, token, "GET", "/users/@me/connections")
+    if status == 200 and isinstance(conns, list) and conns:
+        nf.section("connections")
+        for conn in conns:
+            nf.kv(conn.get("type", "?"),
+                   f"{conn.get('name')}  verified={conn.get('verified')}")
+
+    status, billing = _req(nf, token, "GET", "/users/@me/billing/subscriptions")
+    if status == 200 and isinstance(billing, list) and billing:
+        nf.section("subscriptions")
+        for sub in billing:
+            nf.kv(sub.get("id", "?")[:18], sub.get("status", "?"))
+
+    nf.save_report(f"token_recon_{me.get('id')}", me)
+
+
+def cmd_guild_intel(nf):
+    """Resolve an invite or guild id into a full server profile."""
+    nf.section("guild intel")
+    raw = nf.ask("invite code, invite link, or guild id").strip()
+    if not raw:
+        return
+    if raw.isdigit():
+        status, body = _req(nf, "", "GET", f"/guilds/{raw}/widget.json")
+        if status != 200 or not isinstance(body, dict):
+            nf.finding("MED", "widget disabled for that guild", str(status))
+            return
+        nf.kv("name", body.get("name", "-"))
+        nf.kv("id", body.get("id", "-"))
+        nf.kv("presence", body.get("presence_count", "-"))
+        for channel in (body.get("channels") or [])[:10]:
+            nf.kv("channel", f"#{channel.get('name')}  {channel.get('id')}")
+        return
+    code = raw.rstrip("/").split("/")[-1]
+    status, body = _req(
+        nf, "", "GET",
+        f"/invites/{code}?with_counts=true&with_expiration=true")
+    if status != 200 or not isinstance(body, dict):
+        _print_status(nf, status, body)
+        return
+    guild = body.get("guild") or {}
+    nf.kv("invite", code)
+    nf.kv("guild", guild.get("name", "-"))
+    nf.kv("guild id", guild.get("id", "-"))
+    nf.kv("members", body.get("approximate_member_count", "-"))
+    nf.kv("online", body.get("approximate_presence_count", "-"))
+    nf.kv("boost tier", guild.get("premium_tier", "-"))
+    nf.kv("boosts", guild.get("premium_subscription_count", "-"))
+    nf.kv("verification", guild.get("verification_level", "-"))
+    nf.kv("features", ", ".join(guild.get("features", [])[:8]) or "-")
+    nf.kv("expires", str(body.get("expires_at")))
+    channel = body.get("channel") or {}
+    if channel:
+        nf.kv("channel", f"#{channel.get('name')} ({channel.get('type')})")
+    inviter = body.get("inviter") or {}
+    if inviter:
+        nf.kv("inviter", f"{inviter.get('username')} ({inviter.get('id')})")
+    nf.save_report(f"guild_{guild.get('id', code)}", body)
+
+
 TOKEN_MENU = [
     ("Token Info", cmd_token_info),
     ("Token Nuker", cmd_token_nuker),
@@ -557,7 +791,16 @@ WEBHOOK_MENU = [
     ("Webhook Sender", lambda nf: nf.cmd_webhook(nf.CFG)),
 ]
 
+LOOKUP_MENU = [
+    ("ID Breach Check", cmd_id_breach),
+    ("User Intel", cmd_user_intel),
+    ("Guild Intel", cmd_guild_intel),
+    ("Snowflake Decode", cmd_snowflake),
+    ("Token Recon", cmd_token_recon),
+]
+
 MENU = {"discord": [
+    ("Lookup / Intel", lambda nf: nf.run_submenu(nf, "lookup", LOOKUP_MENU)),
     ("Token Tools", lambda nf: nf.run_submenu(nf, "token", TOKEN_MENU)),
     ("Bot Tools", lambda nf: nf.run_submenu(nf, "bot", BOT_MENU)),
     ("Webhook Tools", lambda nf: nf.run_submenu(nf, "webhook", WEBHOOK_MENU)),
