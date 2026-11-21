@@ -1,8 +1,8 @@
 {
-  "version": "6.1",
+  "version": "6.2",
   "released": "2026-11-21",
   "repo": "sqlnxtf0und/foundation",
-  "notes": "fix submenu crash: run_submenu now accepts (label, fn) module tables as well as numbered rows; restores discord token/bot/webhook/lookup menus",
+  "notes": "breach check: free comb index (no key), id -> email chain, hibp/emailrep optional, reputation block",
   "files": [
     "main.py",
     "apikeys.py",
