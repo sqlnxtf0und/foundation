@@ -1,8 +1,8 @@
 {
-  "version": "6.0",
+  "version": "6.1",
   "released": "2026-11-21",
   "repo": "sqlnxtf0und/foundation",
-  "notes": "discord lookup suite (id breach, user intel, guild intel, snowflake), osint additions (email/domain/ip intel, social sweep, paste hunt, wallet lookup, tech stack, cve intel with epss), push.sh local-only",
+  "notes": "fix submenu crash: run_submenu now accepts (label, fn) module tables as well as numbered rows; restores discord token/bot/webhook/lookup menus",
   "files": [
     "main.py",
     "apikeys.py",

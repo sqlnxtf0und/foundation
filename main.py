@@ -2485,6 +2485,25 @@ MENU = [
 
 
 def run_submenu(me, title, entries):
+    """Render a submenu from either (num, label, fn) or (label, fn) rows.
+
+    Modules hand their tables in the short (label, fn) shape while main builds
+    numbered rows; normalising here keeps both working, so a module table never
+    has to know how the frame numbers itself.
+    """
+    rows = []
+    for item in entries or []:
+        if not isinstance(item, (tuple, list)) or len(item) not in (2, 3):
+            continue
+        if len(item) == 3:
+            num, label, fn = item
+        else:
+            label, fn = item
+            num = str(len(rows) + 1)
+        if fn is None:
+            continue
+        rows.append((str(num), label, fn))
+    entries = rows
     dispatch = {num: fn for num, _label, fn in entries}
     labels = {num: label for num, label, _fn in entries}
     while True:
